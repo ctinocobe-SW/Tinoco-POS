@@ -3,43 +3,15 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 240 10% 10%;
-    --foreground: 0 0% 95%;
-    --card: 240 10% 13%;
-    --card-foreground: 0 0% 95%;
-    --popover: 240 10% 13%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 43 52% 55%;
-    --primary-foreground: 240 10% 10%;
-    --secondary: 240 8% 20%;
-    --secondary-foreground: 0 0% 90%;
-    --muted: 240 8% 22%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 43 52% 55%;
-    --accent-foreground: 240 10% 10%;
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 8% 25%;
-    --input: 240 8% 20%;
-    --ring: 43 52% 55%;
-    --radius: 0.5rem;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-brand-obsidiana text-foreground;
+    background-color: #1C1C2E;
+    color: #f0f0f0;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    font-family: var(--font-cormorant), serif;
   }
 }
 
-/* Scrollbar personalizado */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
