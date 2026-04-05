@@ -1,6 +1,6 @@
 # POS TINOCO
 
-Sistema de Punto de Venta con Gestión de Inventarios, Logística y Analítica.
+Sistema de Punto de Venta con Gestión de Inventarios, Logística y Analítica
 
 **Stack:** Next.js 14 · Supabase · Vercel · Tailwind CSS · shadcn/ui · Dexie.js (offline)
 
