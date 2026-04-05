@@ -8,10 +8,11 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+ const { data: profile } = await supabase
     .from('profiles')
     .select('rol')
     .eq('id', user.id)
+    .returns<{ rol: string }>()
     .single()
 
   if (profile?.rol !== 'admin') redirect('/')
