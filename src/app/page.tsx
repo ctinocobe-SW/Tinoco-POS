@@ -7,14 +7,14 @@ export default async function RootPage() {
 
   if (!user) redirect('/login')
 
-  // Obtener rol y redirigir al dashboard correspondiente
-  const { data: profile } = await supabase
+  const { data } = await supabase
     .from('profiles')
     .select('rol')
     .eq('id', user.id)
     .single()
 
-  if (!profile) redirect('/login')
+  const rol = (data as any)?.rol
+  if (!rol) redirect('/login')
 
-  redirect(`/${profile.rol}`)
+  redirect(`/${rol}`)
 }
