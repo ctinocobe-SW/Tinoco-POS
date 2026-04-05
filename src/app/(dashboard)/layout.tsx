@@ -10,23 +10,23 @@ export default async function DashboardLayout({
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, nombre, email, rol, activo')
     .eq('id', user.id)
     .single()
 
+  const profile = data as any
   if (!profile || !profile.activo) redirect('/login')
 
   return (
-    <div className="flex h-screen bg-brand-obsidiana overflow-hidden">
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: '#1C1C2E' }}>
       <Sidebar rol={profile.rol} nombre={profile.nombre} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <TopBar profile={profile} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
           {children}
         </main>
       </div>
