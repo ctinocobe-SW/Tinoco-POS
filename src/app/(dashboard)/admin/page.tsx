@@ -8,61 +8,56 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
- const { data: profile } = await supabase
+  const { data } = await supabase
     .from('profiles')
     .select('rol')
     .eq('id', user.id)
-    .returns<{ rol: string }>()
     .single()
 
-  if (profile?.rol !== 'admin') redirect('/')
+  const rol = (data as any)?.rol
+  if (rol !== 'admin') redirect('/')
 
-  // KPIs rápidos
-  const [{ count: ticketsPendientes }, { count: ticketsHoy }] = await Promise.all([
-    supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente_aprobacion'),
-    supabase.from('tickets').select('*', { count: 'exact', head: true }).gte('created_at', new Date().toISOString().split('T')[0]),
-  ])
+  const { count: ticketsPendientes } = await supabase
+    .from('tickets')
+    .select('*', { count: 'exact', head: true })
+    .eq('estado', 'pendiente_aprobacion')
+
+  const { count: ticketsHoy } = await supabase
+    .from('tickets')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', new Date().toISOString().split('T')[0])
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-semibold text-brand-gold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">Resumen operativo del día</p>
+        <h1 className="font-heading text-3xl font-semibold" style={{ color: '#C9A84C' }}>
+          Dashboard
+        </h1>
+        <p className="text-sm mt-1" style={{ color: '#888' }}>
+          Resumen operativo del día
+        </p>
       </div>
 
-      {/* KPI Cards — placeholder hasta Fase 6 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Tickets pendientes" value={ticketsPendientes ?? 0} accent />
         <KpiCard label="Tickets hoy" value={ticketsHoy ?? 0} />
         <KpiCard label="Módulo analítica" value="Fase 6" muted />
-        <KpiCard label="Módulo analítica" value="Fase 6" muted />
+        <KpiCard label="Inventario" value="Fase 2" muted />
       </div>
 
-      <div className="rounded-lg border border-border bg-brand-surface p-8 text-center text-muted-foreground">
-        <p className="font-heading text-lg">Dashboard analítico completo disponible en Fase 6</p>
-        <p className="text-sm mt-1">Continúa en Claude Code con la Fase 1: Flujo Core de Ventas</p>
+      <div className="rounded-lg p-8 text-center" style={{ border: '1px solid #3A3A50', background: '#2A2A3E' }}>
+        <p className="font-heading text-lg" style={{ color: '#888' }}>
+          Dashboard analítico completo disponible en Fase 6
+        </p>
       </div>
     </div>
   )
 }
 
-function KpiCard({
-  label,
-  value,
-  accent = false,
-  muted = false,
-}: {
+function KpiCard({ label, value, accent, muted }: {
   label: string
   value: string | number
   accent?: boolean
   muted?: boolean
 }) {
-  return (
-    <div className="rounded-lg border border-border bg-brand-surface p-5">
-      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
-      <p className={`font-heading text-3xl font-semibold ${accent ? 'text-brand-gold' : muted ? 'text-muted-foreground' : 'text-foreground'}`}>
-        {value}
-      </p>
-    </div>
-  )
-}
+  const color = accent ? '#
