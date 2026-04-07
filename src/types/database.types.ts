@@ -137,6 +137,93 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['productos']['Row'], 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['productos']['Insert']>
       }
+      almacenes: {
+        Row: {
+          id: string
+          nombre: string
+          ubicacion: string | null
+          tipo: AlmacenTipo
+          responsable_id: string | null
+          activo: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['almacenes']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['almacenes']['Insert']>
+      }
+      proveedores: {
+        Row: {
+          id: string
+          nombre: string
+          razon_social: string | null
+          rfc: string | null
+          contacto: string | null
+          telefono: string | null
+          email: string | null
+          activo: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['proveedores']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['proveedores']['Insert']>
+      }
+      recepciones: {
+        Row: {
+          id: string
+          proveedor_id: string | null
+          despachador_id: string
+          almacen_id: string
+          fecha: string
+          notas: string | null
+          confirmado: boolean
+          confirmado_at: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['recepciones']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['recepciones']['Insert']>
+      }
+      recepcion_items: {
+        Row: {
+          id: string
+          recepcion_id: string
+          producto_id: string
+          cantidad_esperada: number | null
+          cantidad_recibida: number
+          fecha_caducidad: string | null
+          discrepancia: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['recepcion_items']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['recepcion_items']['Insert']>
+      }
+      inventario: {
+        Row: {
+          id: string
+          producto_id: string
+          almacen_id: string
+          stock_actual: number
+          stock_minimo: number
+          stock_maximo: number | null
+          ubicacion_fisica: string | null
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['inventario']['Row'], 'updated_at'>
+        Update: Partial<Database['public']['Tables']['inventario']['Insert']>
+      }
+      movimientos_inventario: {
+        Row: {
+          id: string
+          producto_id: string
+          almacen_id: string
+          tipo: MovimientoTipo
+          cantidad: number
+          referencia_tipo: string | null
+          referencia_id: string | null
+          usuario_id: string | null
+          notas: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['movimientos_inventario']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['movimientos_inventario']['Insert']>
+      }
     }
     Views: Record<string, never>
     Functions: {

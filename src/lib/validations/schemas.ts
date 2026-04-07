@@ -49,6 +49,23 @@ export const clienteSchema = z.object({
   limite_credito: z.number().nonnegative().default(0),
 })
 
+export const recepcionItemSchema = z.object({
+  producto_id: z.string().uuid(),
+  cantidad_esperada: z.number().positive().optional(),
+  cantidad_recibida: z.number().positive('La cantidad debe ser mayor a 0'),
+  fecha_caducidad: z.string().optional(),
+  discrepancia: z.string().max(500).optional(),
+})
+
+export const crearRecepcionSchema = z.object({
+  proveedor_id: z.string().uuid().optional(),
+  almacen_id: z.string().uuid('Selecciona un almacén'),
+  fecha: z.string().optional(),
+  notas: z.string().max(500).optional(),
+  items: z.array(recepcionItemSchema).min(1, 'Agrega al menos un producto'),
+})
+
 export type CrearTicketInput = z.infer<typeof crearTicketSchema>
 export type ProductoInput = z.infer<typeof productoSchema>
 export type ClienteInput = z.infer<typeof clienteSchema>
+export type CrearRecepcionInput = z.infer<typeof crearRecepcionSchema>
