@@ -11,12 +11,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          obsidiana: '#1C1C2E',
-          gold: '#C9A84C',
-          'gold-light': '#E8C97A',
-          surface: '#2A2A3E',
-          muted: '#3A3A50',
+          bg: '#FAFAFA',
+          text: '#0A0A0A',
+          accent: '#000000',
+          surface: '#EFEFEF',
+          muted: '#D4D4D4',
         },
+        border: 'hsl(var(--border))',
+        foreground: 'hsl(var(--foreground))',
+        'muted-foreground': 'hsl(var(--muted-foreground))',
+        destructive: 'hsl(var(--destructive))',
       },
       fontFamily: {
         heading: ['var(--font-cormorant)', 'serif'],

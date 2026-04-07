@@ -6,11 +6,11 @@ export const metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-brand-obsidiana px-4">
+    <main className="min-h-screen flex items-center justify-center bg-brand-bg px-4">
       <div className="w-full max-w-md">
         {/* Logo / Header */}
         <div className="text-center mb-8">
-          <h1 className="font-heading text-4xl font-semibold text-brand-gold tracking-wide mb-1">
+          <h1 className="font-heading text-4xl font-semibold text-brand-accent tracking-wide mb-1">
             TINOCO
           </h1>
           <p className="text-muted-foreground text-sm tracking-widest uppercase">

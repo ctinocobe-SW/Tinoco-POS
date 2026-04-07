@@ -10,7 +10,7 @@ PRD v1.0 disponible en `docs/PRD-Sistema-POS-TINOCO.docx`.
 ## Stack
 
 - **Framework:** Next.js 14 (App Router, TypeScript strict)
-- **UI:** Tailwind CSS + shadcn/ui. Paleta: obsidiana `#1C1C2E`, dorado `#C9A84C`
+- **UI:** Tailwind CSS + shadcn/ui. Paleta: fondo `#FAFAFA`, texto `#0A0A0A`, acento `#000000`, superficie `#EFEFEF`
 - **Backend/DB:** Supabase (PostgreSQL + Auth + Realtime + Storage)
 - **Validaciones:** Zod (siempre validar en servidor con schemas de `src/lib/validations/schemas.ts`)
 - **Estado servidor:** TanStack Query

@@ -2,26 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TicketCard } from '@/components/tickets/TicketCard'
 
-export const metadata = { title: 'Verificación — POS TINOCO' }
+export const metadata = { title: 'Cola de Aprobación — POS TINOCO' }
 
-export default async function ChecadorPage() {
+export default async function AdminTicketsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('rol')
     .eq('id', user.id)
     .single()
 
-  const rol = (data as any)?.rol
-  if (!rol || !['admin', 'checador'].includes(rol)) redirect('/')
+  if ((profile as any)?.rol !== 'admin') redirect('/')
 
   const { data: tickets } = await supabase
     .from('tickets')
     .select('id, folio, estado, total, created_at, clientes(nombre)')
-    .in('estado', ['aprobado', 'en_verificacion'])
+    .eq('estado', 'pendiente_aprobacion')
     .order('created_at', { ascending: true })
 
   const ticketsList = (tickets ?? []).map((t: any) => ({
@@ -35,20 +34,20 @@ export default async function ChecadorPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-heading font-semibold mb-2">Cola de Verificación</h1>
+      <h1 className="text-2xl font-heading font-semibold mb-2">Cola de Aprobación</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        {ticketsList.length} pedido{ticketsList.length !== 1 ? 's' : ''} por verificar
+        {ticketsList.length} ticket{ticketsList.length !== 1 ? 's' : ''} pendiente{ticketsList.length !== 1 ? 's' : ''}
       </p>
 
       {ticketsList.length > 0 ? (
         <div className="space-y-3">
           {ticketsList.map((t) => (
-            <TicketCard key={t.id} ticket={t} href={`/checador/verificar/${t.id}`} />
+            <TicketCard key={t.id} ticket={t} href={`/admin/tickets/${t.id}`} />
           ))}
         </div>
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p>Cola vacía</p>
+          <p>No hay tickets pendientes de aprobación</p>
         </div>
       )}
     </div>

@@ -76,6 +76,45 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['tickets']['Row'], 'folio' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['tickets']['Insert']>
       }
+      clientes: {
+        Row: {
+          id: string
+          nombre: string
+          razon_social: string | null
+          rfc: string | null
+          regimen_fiscal: string | null
+          codigo_postal: string | null
+          uso_cfdi: string
+          telefono: string | null
+          email: string | null
+          whatsapp: string | null
+          credito_habilitado: boolean
+          limite_credito: number
+          activo: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['clientes']['Row'], 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['clientes']['Insert']>
+      }
+      ticket_items: {
+        Row: {
+          id: string
+          ticket_id: string
+          producto_id: string
+          cantidad: number
+          precio_unitario: number
+          descuento: number
+          subtotal: number
+          verificado: boolean
+          discrepancia_tipo: DiscrepanciaTipo | null
+          discrepancia_nota: string | null
+          foto_url: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['ticket_items']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['ticket_items']['Insert']>
+      }
       productos: {
         Row: {
           id: string

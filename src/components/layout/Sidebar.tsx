@@ -54,7 +54,7 @@ export function Sidebar({ rol, nombre }: SidebarProps) {
     <aside className="w-60 flex-shrink-0 bg-brand-surface border-r border-border flex flex-col">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-border">
-        <h1 className="font-heading text-2xl font-semibold text-brand-gold tracking-wide">TINOCO</h1>
+        <h1 className="font-heading text-2xl font-semibold text-brand-accent tracking-wide">TINOCO</h1>
         <p className="text-[10px] text-muted-foreground tracking-widest uppercase mt-0.5">Sistema POS</p>
       </div>
 
@@ -70,7 +70,7 @@ export function Sidebar({ rol, nombre }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors',
                 active
-                  ? 'bg-brand-gold/15 text-brand-gold font-medium'
+                  ? 'bg-brand-accent/10 text-brand-accent font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-brand-muted/40'
               )}
             >

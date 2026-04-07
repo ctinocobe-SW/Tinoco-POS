@@ -18,7 +18,6 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   title: 'POS TINOCO',
   description: 'Sistema de Punto de Venta — TINOCO software',
-  manifest: '/manifest.json',
 }
 
 export default function RootLayout({

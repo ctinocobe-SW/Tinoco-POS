@@ -40,7 +40,7 @@ export function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
-          className="w-full bg-brand-muted border border-border rounded-md px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand-gold transition-colors"
+          className="w-full bg-white border border-border rounded-md px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand-accent transition-colors"
           placeholder="usuario@empresa.com"
         />
       </div>
@@ -55,7 +55,7 @@ export function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="current-password"
-          className="w-full bg-brand-muted border border-border rounded-md px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand-gold transition-colors"
+          className="w-full bg-white border border-border rounded-md px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand-accent transition-colors"
           placeholder="••••••••"
         />
       </div>
@@ -63,7 +63,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-brand-gold text-brand-obsidiana font-semibold py-2.5 rounded-md text-sm hover:bg-brand-gold-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full bg-brand-accent text-white font-semibold py-2.5 rounded-md text-sm hover:bg-brand-accent/80 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading ? 'Accediendo...' : 'Iniciar sesión'}
       </button>

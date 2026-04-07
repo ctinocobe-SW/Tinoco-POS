@@ -22,11 +22,11 @@ export default async function DashboardLayout({
   if (!profile || !profile.activo) redirect('/login')
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: '#1C1C2E' }}>
+    <div className="flex h-screen overflow-hidden bg-brand-bg">
       <Sidebar rol={profile.rol} nombre={profile.nombre} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar profile={profile} />
-        <main style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>
