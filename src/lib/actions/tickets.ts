@@ -243,6 +243,47 @@ export async function verificarItem(input: {
   return { data: { ok: true } }
 }
 
+export async function despacharTicket(ticketId: string) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (!['admin', 'despachador'].includes(profile.rol)) {
+    return { error: 'Sin permisos para despachar tickets' }
+  }
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('id, estado')
+    .eq('id', ticketId)
+    .single()
+
+  if (!ticket) {
+    return { error: 'Ticket no encontrado' }
+  }
+
+  if (!['verificado', 'con_incidencias'].includes((ticket as any).estado)) {
+    return { error: 'El ticket debe estar verificado para poder despacharse' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('tickets')
+    .update({
+      estado: 'despachado',
+      despachado_at: new Date().toISOString(),
+    })
+    .eq('id', ticketId)
+
+  if (updateError) {
+    return { error: updateError.message }
+  }
+
+  revalidatePath('/despachador/surtido')
+  revalidatePath('/admin/surtido')
+  revalidatePath('/admin/tickets')
+  revalidatePath('/despachador/tickets')
+
+  return { data: { despachado: true } }
+}
+
 export async function finalizarVerificacion(ticketId: string) {
   const { profile, supabase } = await getAuthenticatedProfile()
 

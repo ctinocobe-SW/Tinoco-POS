@@ -65,7 +65,17 @@ export const crearRecepcionSchema = z.object({
   items: z.array(recepcionItemSchema).min(1, 'Agrega al menos un producto'),
 })
 
+export const ajusteInventarioSchema = z.object({
+  inventario_id: z.string().uuid().optional(),
+  producto_id: z.string().uuid(),
+  almacen_id: z.string().uuid(),
+  tipo: z.enum(['entrada', 'salida', 'ajuste', 'merma']),
+  cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
+  notas: z.string().max(500).optional(),
+})
+
 export type CrearTicketInput = z.infer<typeof crearTicketSchema>
 export type ProductoInput = z.infer<typeof productoSchema>
 export type ClienteInput = z.infer<typeof clienteSchema>
 export type CrearRecepcionInput = z.infer<typeof crearRecepcionSchema>
+export type AjusteInventarioInput = z.infer<typeof ajusteInventarioSchema>
