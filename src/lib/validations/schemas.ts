@@ -74,8 +74,25 @@ export const ajusteInventarioSchema = z.object({
   notas: z.string().max(500).optional(),
 })
 
+export const almacenSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es requerido').max(100),
+  ubicacion: z.string().max(200).optional(),
+  tipo: z.enum(['bodega', 'sucursal']),
+})
+
+export const proveedorSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es requerido').max(200),
+  razon_social: z.string().max(200).optional(),
+  rfc: z.string().max(13).optional(),
+  contacto: z.string().max(100).optional(),
+  telefono: z.string().max(20).optional(),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+})
+
 export type CrearTicketInput = z.infer<typeof crearTicketSchema>
 export type ProductoInput = z.infer<typeof productoSchema>
 export type ClienteInput = z.infer<typeof clienteSchema>
 export type CrearRecepcionInput = z.infer<typeof crearRecepcionSchema>
 export type AjusteInventarioInput = z.infer<typeof ajusteInventarioSchema>
+export type AlmacenInput = z.infer<typeof almacenSchema>
+export type ProveedorInput = z.infer<typeof proveedorSchema>
