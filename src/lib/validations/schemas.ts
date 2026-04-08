@@ -9,6 +9,7 @@ export const ticketItemSchema = z.object({
 
 export const crearTicketSchema = z.object({
   cliente_id: z.string().uuid('Selecciona un cliente'),
+  despachador_id: z.string().uuid().optional(), // admin puede especificar
   almacen_id: z.string().uuid().optional(),
   items: z.array(ticketItemSchema).min(1, 'Agrega al menos un producto'),
   notas: z.string().max(500).optional(),

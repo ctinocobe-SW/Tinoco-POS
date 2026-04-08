@@ -17,7 +17,8 @@ export async function crearTicket(input: CrearTicketInput) {
     return { error: parsed.error.issues[0].message }
   }
 
-  const { cliente_id, almacen_id, items, notas } = parsed.data
+  const { cliente_id, despachador_id: inputDespachadorId, almacen_id, items, notas } = parsed.data
+  const despachadorId = (inputDespachadorId && profile.rol === 'admin') ? inputDespachadorId : profile.id
 
   // Obtener precios reales de productos para evitar manipulación
   const productoIds = items.map((i) => i.producto_id)
@@ -70,7 +71,7 @@ export async function crearTicket(input: CrearTicketInput) {
     .insert({
       id: crypto.randomUUID(),
       cliente_id,
-      despachador_id: profile.id,
+      despachador_id: despachadorId,
       almacen_id: almacen_id ?? profile.almacen_id,
       estado: 'pendiente_aprobacion',
       subtotal,
