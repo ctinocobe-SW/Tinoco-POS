@@ -80,11 +80,9 @@ export default async function ProductoDetailPage({ params }: PageProps) {
       <ProductoForm
         productoId={p.id}
         defaultValues={{
-          sku: p.sku,
           nombre: p.nombre,
           descripcion: p.descripcion ?? '',
-          categoria: p.categoria ?? '',
-          unidad_medida: p.unidad_medida,
+          categoria: p.categoria ?? 'Otros',
           peso_kg: Number(p.peso_kg),
           precio_base: Number(p.precio_base),
           costo: Number(p.costo),

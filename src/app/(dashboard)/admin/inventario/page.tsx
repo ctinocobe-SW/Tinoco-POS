@@ -19,33 +19,19 @@ export default async function InventarioPage() {
 
   if ((profile as any)?.rol !== 'admin') redirect('/')
 
-  // Cargar inventario con joins a productos y almacenes
+  // Todos los productos activos
+  const { data: productos } = await supabase
+    .from('productos')
+    .select('id, sku, nombre, categoria')
+    .eq('activo', true)
+    .order('nombre', { ascending: true })
+
+  // Todos los registros de inventario con info de almacén
   const { data: inventario } = await supabase
     .from('inventario')
-    .select(`
-      id,
-      producto_id,
-      almacen_id,
-      stock_actual,
-      stock_minimo,
-      productos(sku, nombre, unidad_medida),
-      almacenes(nombre)
-    `)
-    .order('stock_actual', { ascending: true })
+    .select('id, producto_id, almacen_id, stock_actual, stock_minimo, almacenes(nombre)')
 
-  const rows = (inventario ?? []).map((row: any) => ({
-    inventario_id: row.id,
-    producto_id: row.producto_id,
-    producto_sku: row.productos?.sku ?? '',
-    producto_nombre: row.productos?.nombre ?? '',
-    producto_unidad: row.productos?.unidad_medida ?? '',
-    almacen_id: row.almacen_id,
-    almacen_nombre: row.almacenes?.nombre ?? '',
-    stock_actual: Number(row.stock_actual),
-    stock_minimo: Number(row.stock_minimo),
-  }))
-
-  // Cargar almacenes para filtro
+  // Almacenes activos para filtro y ajuste
   const { data: almacenes } = await supabase
     .from('almacenes')
     .select('id, nombre')
@@ -54,8 +40,57 @@ export default async function InventarioPage() {
 
   const almacenesList = (almacenes ?? []) as { id: string; nombre: string }[]
 
-  const totalProductos = new Set(rows.map((r) => r.producto_id)).size
-  const bajosMinimo = rows.filter((r) => r.stock_actual < r.stock_minimo).length
+  // Construir mapa de inventario por producto
+  type StockEntry = {
+    inventario_id: string
+    almacen_id: string
+    almacen_nombre: string
+    stock_actual: number
+    stock_minimo: number
+  }
+
+  type ProductoRow = {
+    producto_id: string
+    producto_sku: string
+    producto_nombre: string
+    producto_categoria: string
+    stock_total: number
+    stock_entries: StockEntry[]
+  }
+
+  const productoMap = new Map<string, ProductoRow>()
+  for (const p of (productos ?? []) as any[]) {
+    productoMap.set(p.id, {
+      producto_id: p.id,
+      producto_sku: p.sku ?? '',
+      producto_nombre: p.nombre,
+      producto_categoria: p.categoria ?? 'Otros',
+      stock_total: 0,
+      stock_entries: [],
+    })
+  }
+
+  for (const inv of (inventario ?? []) as any[]) {
+    const p = productoMap.get(inv.producto_id)
+    if (!p) continue
+    const stock = Number(inv.stock_actual)
+    p.stock_entries.push({
+      inventario_id: inv.id,
+      almacen_id: inv.almacen_id,
+      almacen_nombre: inv.almacenes?.nombre ?? '',
+      stock_actual: stock,
+      stock_minimo: Number(inv.stock_minimo),
+    })
+    p.stock_total += stock
+  }
+
+  const rows = Array.from(productoMap.values())
+
+  const totalProductos = rows.length
+  const sinStock = rows.filter((r) => r.stock_total === 0).length
+  const bajosMinimo = rows.filter((r) =>
+    r.stock_entries.some((e) => e.stock_actual < e.stock_minimo && e.stock_minimo > 0)
+  ).length
 
   return (
     <div>
@@ -63,7 +98,9 @@ export default async function InventarioPage() {
         <div>
           <h1 className="text-2xl font-heading font-semibold">Inventario</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {totalProductos} producto{totalProductos !== 1 ? 's' : ''} · {bajosMinimo > 0 ? `${bajosMinimo} bajo mínimo` : 'todo en orden'}
+            {totalProductos} producto{totalProductos !== 1 ? 's' : ''}
+            {sinStock > 0 && ` · ${sinStock} sin stock`}
+            {bajosMinimo > 0 && ` · ${bajosMinimo} bajo mínimo`}
           </p>
         </div>
         <Link
@@ -75,14 +112,7 @@ export default async function InventarioPage() {
         </Link>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground border border-border rounded-lg">
-          <p>No hay registros de inventario.</p>
-          <p className="text-xs mt-1">Confirma recepciones de mercancía para poblar el inventario.</p>
-        </div>
-      ) : (
-        <InventarioTable rows={rows} almacenes={almacenesList} />
-      )}
+      <InventarioTable rows={rows} almacenes={almacenesList} />
     </div>
   )
 }

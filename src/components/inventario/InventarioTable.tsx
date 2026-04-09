@@ -6,44 +6,120 @@ import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { AjusteDialog } from './AjusteDialog'
 
-interface InventarioRow {
+interface StockEntry {
   inventario_id: string
-  producto_id: string
-  producto_sku: string
-  producto_nombre: string
-  producto_unidad: string
   almacen_id: string
   almacen_nombre: string
   stock_actual: number
   stock_minimo: number
 }
 
+interface ProductoRow {
+  producto_id: string
+  producto_sku: string
+  producto_nombre: string
+  producto_categoria: string
+  stock_total: number
+  stock_entries: StockEntry[]
+}
+
+interface AjusteTarget {
+  inventario_id: string | undefined
+  producto_id: string
+  producto_nombre: string
+  producto_sku: string
+  almacen_id: string
+  almacen_nombre: string
+  stock_actual: number
+}
+
 interface InventarioTableProps {
-  rows: InventarioRow[]
+  rows: ProductoRow[]
   almacenes: { id: string; nombre: string }[]
 }
 
 export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
   const [filtroAlmacen, setFiltroAlmacen] = useState<string>('todos')
-  const [ajusteItem, setAjusteItem] = useState<InventarioRow | null>(null)
+  const [ajusteTarget, setAjusteTarget] = useState<AjusteTarget | null>(null)
+  const [ajusteAlmacenes, setAjusteAlmacenes] = useState<{ id: string; nombre: string }[]>([])
 
-  const filtered = useMemo(() => {
-    if (filtroAlmacen === 'todos') return rows
-    return rows.filter((r) => r.almacen_id === filtroAlmacen)
-  }, [rows, filtroAlmacen])
+  // Construir vista según filtro
+  const tableRows = useMemo(() => {
+    return rows.map((p) => {
+      if (filtroAlmacen === 'todos') {
+        // Mostrar stock total
+        return {
+          producto_id: p.producto_id,
+          producto_sku: p.producto_sku,
+          producto_nombre: p.producto_nombre,
+          producto_categoria: p.producto_categoria,
+          stock: p.stock_total,
+          stock_minimo: Math.min(...p.stock_entries.map((e) => e.stock_minimo), Infinity) === Infinity ? 0 : Math.min(...p.stock_entries.map((e) => e.stock_minimo)),
+          almacen_nombre: p.stock_entries.length > 1
+            ? `${p.stock_entries.length} almacenes`
+            : p.stock_entries[0]?.almacen_nombre ?? '—',
+          tiene_stock: p.stock_total > 0,
+          // Para ajuste: si hay una sola entrada de almacén, usarla; si hay varias o ninguna, abrir picker
+          ajuste_entry: p.stock_entries.length === 1 ? p.stock_entries[0] : null,
+        }
+      } else {
+        const entry = p.stock_entries.find((e) => e.almacen_id === filtroAlmacen)
+        const almacen = almacenes.find((a) => a.id === filtroAlmacen)
+        return {
+          producto_id: p.producto_id,
+          producto_sku: p.producto_sku,
+          producto_nombre: p.producto_nombre,
+          producto_categoria: p.producto_categoria,
+          stock: entry?.stock_actual ?? 0,
+          stock_minimo: entry?.stock_minimo ?? 0,
+          almacen_nombre: almacen?.nombre ?? '',
+          tiene_stock: (entry?.stock_actual ?? 0) > 0,
+          ajuste_entry: entry ?? null,
+        }
+      }
+    })
+  }, [rows, filtroAlmacen, almacenes])
 
-  const bajosMinimo = filtered.filter((r) => r.stock_actual < r.stock_minimo).length
+  const bajosMinimo = tableRows.filter((r) => r.stock_minimo > 0 && r.stock < r.stock_minimo).length
+  const sinStock = tableRows.filter((r) => !r.tiene_stock).length
+
+  const handleAjustar = (row: typeof tableRows[0]) => {
+    if (filtroAlmacen !== 'todos' || row.ajuste_entry) {
+      // Ajuste directo
+      const entry = row.ajuste_entry
+      const almacen = almacenes.find((a) => a.id === filtroAlmacen) ?? (entry ? { id: entry.almacen_id, nombre: entry.almacen_nombre } : null)
+      setAjusteAlmacenes([])
+      setAjusteTarget({
+        inventario_id: entry?.inventario_id,
+        producto_id: row.producto_id,
+        producto_nombre: row.producto_nombre,
+        producto_sku: row.producto_sku,
+        almacen_id: entry?.almacen_id ?? filtroAlmacen,
+        almacen_nombre: entry?.almacen_nombre ?? almacen?.nombre ?? '',
+        stock_actual: entry?.stock_actual ?? 0,
+      })
+    } else {
+      // Necesita seleccionar almacén primero → pasar lista al dialog
+      setAjusteAlmacenes(almacenes)
+      setAjusteTarget({
+        inventario_id: undefined,
+        producto_id: row.producto_id,
+        producto_nombre: row.producto_nombre,
+        producto_sku: row.producto_sku,
+        almacen_id: '',
+        almacen_nombre: '',
+        stock_actual: row.stock,
+      })
+    }
+  }
 
   return (
     <>
+      {/* Filtros */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
           <label className="text-sm text-muted-foreground">Almacén:</label>
-          <Select
-            value={filtroAlmacen}
-            onChange={(e) => setFiltroAlmacen(e.target.value)}
-            className="w-48"
-          >
+          <Select value={filtroAlmacen} onChange={(e) => setFiltroAlmacen(e.target.value)} className="w-48">
             <option value="todos">Todos</option>
             {almacenes.map((a) => (
               <option key={a.id} value={a.id}>{a.nombre}</option>
@@ -51,92 +127,79 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
           </Select>
         </div>
         {bajosMinimo > 0 && (
-          <div className="flex items-center gap-1.5 text-amber-600 text-sm">
-            <AlertTriangle size={14} />
-            {bajosMinimo} producto{bajosMinimo !== 1 ? 's' : ''} bajo mínimo
-          </div>
+          <span className="flex items-center gap-1 text-amber-600 text-sm">
+            <AlertTriangle size={13} />
+            {bajosMinimo} bajo mínimo
+          </span>
+        )}
+        {sinStock > 0 && (
+          <span className="text-muted-foreground text-sm">{sinStock} sin stock</span>
         )}
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm border border-border rounded-lg">
-          No hay registros de inventario para este almacén
-        </div>
-      ) : (
-        <div className="border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
-                <th className="px-4 py-2.5 text-left">Producto</th>
-                <th className="px-4 py-2.5 text-left">Almacén</th>
-                <th className="px-4 py-2.5 text-right w-28">Stock actual</th>
-                <th className="px-4 py-2.5 text-right w-28">Stock mínimo</th>
-                <th className="px-4 py-2.5 text-center w-24">Estado</th>
-                <th className="px-4 py-2.5 w-24"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row) => {
-                const bajo = row.stock_actual < row.stock_minimo
-                return (
-                  <tr key={row.inventario_id} className="border-b border-border last:border-0 hover:bg-brand-surface/50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{row.producto_nombre}</p>
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {row.producto_sku} · {row.producto_unidad}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {row.almacen_nombre}
-                    </td>
-                    <td className={`px-4 py-3 text-right font-mono font-medium tabular-nums ${bajo ? 'text-red-600' : ''}`}>
-                      {row.stock_actual % 1 === 0 ? row.stock_actual : row.stock_actual.toFixed(3).replace(/0+$/, '')}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-muted-foreground tabular-nums">
-                      {row.stock_minimo % 1 === 0 ? row.stock_minimo : row.stock_minimo.toFixed(3).replace(/0+$/, '')}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {bajo ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                          <AlertTriangle size={10} />
-                          Bajo
-                        </span>
-                      ) : (
-                        <span className="inline-flex text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                          OK
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setAjusteItem(row)}
-                      >
-                        Ajustar
-                      </Button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
+              <th className="px-4 py-2.5 text-left">Producto</th>
+              <th className="px-4 py-2.5 text-left w-28">Categoría</th>
+              {filtroAlmacen === 'todos' && <th className="px-4 py-2.5 text-left">Almacén(es)</th>}
+              <th className="px-4 py-2.5 text-right w-28">Stock</th>
+              <th className="px-4 py-2.5 text-center w-24">Estado</th>
+              <th className="px-4 py-2.5 w-24"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.map((row) => {
+              const bajo = row.stock_minimo > 0 && row.stock < row.stock_minimo
+              return (
+                <tr key={row.producto_id} className={`border-b border-border last:border-0 hover:bg-brand-surface/50 ${!row.tiene_stock ? 'opacity-60' : ''}`}>
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{row.producto_nombre}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{row.producto_sku}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{row.producto_categoria}</td>
+                  {filtroAlmacen === 'todos' && (
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{row.almacen_nombre}</td>
+                  )}
+                  <td className={`px-4 py-3 text-right font-mono font-medium tabular-nums ${bajo ? 'text-red-600' : !row.tiene_stock ? 'text-muted-foreground' : ''}`}>
+                    {row.tiene_stock
+                      ? (row.stock % 1 === 0 ? row.stock : row.stock.toFixed(3).replace(/0+$/, ''))
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {!row.tiene_stock ? (
+                      <span className="inline-flex text-xs text-muted-foreground bg-brand-surface border border-border rounded-full px-2 py-0.5">
+                        Sin stock
+                      </span>
+                    ) : bajo ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                        <AlertTriangle size={10} />Bajo
+                      </span>
+                    ) : (
+                      <span className="inline-flex text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                        OK
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button size="sm" variant="outline" onClick={() => handleAjustar(row)}>
+                      Ajustar
+                    </Button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
 
-      {ajusteItem && (
+      {ajusteTarget && (
         <AjusteDialog
-          open={!!ajusteItem}
-          onClose={() => setAjusteItem(null)}
-          item={{
-            inventario_id: ajusteItem.inventario_id,
-            producto_id: ajusteItem.producto_id,
-            almacen_id: ajusteItem.almacen_id,
-            producto_nombre: ajusteItem.producto_nombre,
-            producto_sku: ajusteItem.producto_sku,
-            almacen_nombre: ajusteItem.almacen_nombre,
-            stock_actual: ajusteItem.stock_actual,
-          }}
+          open={!!ajusteTarget}
+          onClose={() => { setAjusteTarget(null); setAjusteAlmacenes([]) }}
+          item={ajusteTarget}
+          almacenesDisponibles={ajusteAlmacenes}
         />
       )}
     </>

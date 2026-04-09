@@ -21,19 +21,24 @@ export const aprobarTicketSchema = z.object({
   motivo: z.string().optional(),
 })
 
+export const CATEGORIAS_PRODUCTO = [
+  'Chiles', 'Pastas', 'Croquetas', 'Semillas', 'Enlatados',
+  'Medicina', 'Bebidas', 'Botanas', 'Gomitas', 'Molidos', 'Abarrotes', 'Otros',
+] as const
+
 export const productoSchema = z.object({
-  sku: z.string().min(1).max(50),
-  nombre: z.string().min(1).max(200),
+  nombre: z.string().min(1, 'El nombre es requerido').max(200),
   descripcion: z.string().max(1000).optional(),
-  categoria: z.string().max(100).optional(),
-  unidad_medida: z.string().default('PZA'),
-  peso_kg: z.number().nonnegative().default(0),
-  precio_base: z.number().nonnegative(),
+  categoria: z.enum(CATEGORIAS_PRODUCTO).default('Otros'),
+  precio_base: z.number().nonnegative('El precio no puede ser negativo'),
   costo: z.number().nonnegative().default(0),
   tasa_iva: z.number().min(0).max(1).default(0.16),
   tasa_ieps: z.number().min(0).max(1).default(0),
+  peso_kg: z.number().nonnegative().default(0),
   requiere_caducidad: z.boolean().default(false),
   codigo_barras: z.string().optional(),
+  stock_inicial: z.number().nonnegative().default(0).optional(),
+  almacen_id_inicial: z.string().uuid().optional(),
 })
 
 export const clienteSchema = z.object({
@@ -92,6 +97,7 @@ export const proveedorSchema = z.object({
 
 export type CrearTicketInput = z.infer<typeof crearTicketSchema>
 export type ProductoInput = z.infer<typeof productoSchema>
+export type CategoriaProducto = typeof CATEGORIAS_PRODUCTO[number]
 export type ClienteInput = z.infer<typeof clienteSchema>
 export type CrearRecepcionInput = z.infer<typeof crearRecepcionSchema>
 export type AjusteInventarioInput = z.infer<typeof ajusteInventarioSchema>

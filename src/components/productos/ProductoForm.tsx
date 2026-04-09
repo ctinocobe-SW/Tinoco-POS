@@ -1,27 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 
-import { productoSchema } from '@/lib/validations/schemas'
-import type { ProductoInput } from '@/lib/validations/schemas'
+import { productoSchema, CATEGORIAS_PRODUCTO } from '@/lib/validations/schemas'
+import type { ProductoInput, CategoriaProducto } from '@/lib/validations/schemas'
 import { crearProducto, actualizarProducto } from '@/lib/actions/productos'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { cn } from '@/lib/utils/cn'
+
+interface Almacen { id: string; nombre: string }
 
 interface ProductoFormProps {
   productoId?: string
   defaultValues?: Partial<ProductoInput>
+  almacenes?: Almacen[]
 }
 
-const UNIDADES = ['PZA', 'KG', 'LT', 'MT', 'CJA', 'PAQ', 'PAR', 'JGO', 'TON', 'M2']
-
-export function ProductoForm({ productoId, defaultValues }: ProductoFormProps) {
+export function ProductoForm({ productoId, defaultValues, almacenes = [] }: ProductoFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const isEdit = !!productoId
@@ -29,11 +31,9 @@ export function ProductoForm({ productoId, defaultValues }: ProductoFormProps) {
   const form = useForm<ProductoInput>({
     resolver: zodResolver(productoSchema),
     defaultValues: {
-      sku: '',
       nombre: '',
       descripcion: '',
-      categoria: '',
-      unidad_medida: 'PZA',
+      categoria: 'Otros',
       peso_kg: 0,
       precio_base: 0,
       costo: 0,
@@ -41,6 +41,8 @@ export function ProductoForm({ productoId, defaultValues }: ProductoFormProps) {
       tasa_ieps: 0,
       requiere_caducidad: false,
       codigo_barras: '',
+      stock_inicial: 0,
+      almacen_id_inicial: almacenes[0]?.id ?? '',
       ...defaultValues,
     },
   })
@@ -52,6 +54,9 @@ export function ProductoForm({ productoId, defaultValues }: ProductoFormProps) {
     watch,
     setValue,
   } = form
+
+  const categoriaSeleccionada = watch('categoria')
+  const stockInicial = watch('stock_inicial') ?? 0
 
   const onSubmit = async (data: ProductoInput) => {
     setSubmitting(true)
@@ -74,31 +79,10 @@ export function ProductoForm({ productoId, defaultValues }: ProductoFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
+
       {/* Identificación */}
       <div className="border border-border rounded-lg p-5 space-y-4">
         <h2 className="text-sm font-medium">Identificación</h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="sku">SKU *</Label>
-            <Input
-              id="sku"
-              {...register('sku')}
-              placeholder="PROD-001"
-              disabled={isEdit}
-            />
-            {errors.sku && <p className="text-xs text-red-600">{errors.sku.message}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="codigo_barras">Código de barras</Label>
-            <Input
-              id="codigo_barras"
-              {...register('codigo_barras')}
-              placeholder="7501000000000"
-            />
-          </div>
-        </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="nombre">Nombre *</Label>
@@ -115,30 +99,42 @@ export function ProductoForm({ productoId, defaultValues }: ProductoFormProps) {
           <textarea
             id="descripcion"
             {...register('descripcion')}
-            rows={3}
+            rows={2}
             placeholder="Descripción opcional..."
             className="w-full bg-white border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent resize-none"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="categoria">Categoría</Label>
-            <Input
-              id="categoria"
-              {...register('categoria')}
-              placeholder="Ej. Bebidas, Abarrotes..."
-            />
+        <div className="space-y-2">
+          <Label>Categoría</Label>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIAS_PRODUCTO.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setValue('categoria', cat as CategoriaProducto)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                  categoriaSeleccionada === cat
+                    ? 'bg-brand-accent text-white border-brand-accent'
+                    : 'bg-white text-muted-foreground border-border hover:border-brand-accent hover:text-foreground'
+                )}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
+          {errors.categoria && <p className="text-xs text-red-600">{errors.categoria.message}</p>}
+        </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="unidad_medida">Unidad de medida</Label>
-            <Select id="unidad_medida" {...register('unidad_medida')}>
-              {UNIDADES.map((u) => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-            </Select>
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="codigo_barras">Código de barras</Label>
+          <Input
+            id="codigo_barras"
+            {...register('codigo_barras')}
+            placeholder="7501000000000"
+            className="font-mono"
+          />
         </div>
       </div>
 
@@ -230,6 +226,39 @@ export function ProductoForm({ productoId, defaultValues }: ProductoFormProps) {
           </div>
         </div>
       </div>
+
+      {/* Stock inicial (solo en creación) */}
+      {!isEdit && almacenes.length > 0 && (
+        <div className="border border-border rounded-lg p-5 space-y-4">
+          <h2 className="text-sm font-medium">Stock inicial</h2>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="stock_inicial">Cantidad inicial</Label>
+              <Input
+                id="stock_inicial"
+                type="number"
+                step="0.001"
+                min="0"
+                {...register('stock_inicial', { valueAsNumber: true })}
+                placeholder="0"
+              />
+              <p className="text-xs text-muted-foreground">Dejar en 0 para registrar el stock más tarde</p>
+            </div>
+
+            {Number(stockInicial) > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="almacen_id_inicial">Almacén *</Label>
+                <Select id="almacen_id_inicial" {...register('almacen_id_inicial')}>
+                  {almacenes.map((a) => (
+                    <option key={a.id} value={a.id}>{a.nombre}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Acciones */}
       <div className="flex gap-3">

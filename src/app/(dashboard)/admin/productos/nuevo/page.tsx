@@ -19,6 +19,12 @@ export default async function NuevoProductoPage() {
 
   if ((profile as any)?.rol !== 'admin') redirect('/')
 
+  const { data: almacenes } = await supabase
+    .from('almacenes')
+    .select('id, nombre')
+    .eq('activo', true)
+    .order('nombre', { ascending: true })
+
   return (
     <div>
       <Link
@@ -31,7 +37,7 @@ export default async function NuevoProductoPage() {
 
       <h1 className="text-2xl font-heading font-semibold mb-6">Nuevo producto</h1>
 
-      <ProductoForm />
+      <ProductoForm almacenes={(almacenes ?? []) as { id: string; nombre: string }[]} />
     </div>
   )
 }

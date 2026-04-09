@@ -5,6 +5,18 @@ import { getAuthenticatedProfile } from './helpers'
 import { productoSchema } from '@/lib/validations/schemas'
 import type { ProductoInput } from '@/lib/validations/schemas'
 
+const SKU_PREFIX: Record<string, string> = {
+  Chiles: 'CHI', Pastas: 'PAS', Croquetas: 'CRO', Semillas: 'SEM',
+  Enlatados: 'ENL', Medicina: 'MED', Bebidas: 'BEB', Botanas: 'BOT',
+  Gomitas: 'GOM', Molidos: 'MOL', Abarrotes: 'ABA', Otros: 'OTR',
+}
+
+function generarSku(categoria: string): string {
+  const prefix = SKU_PREFIX[categoria] ?? 'PRD'
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase()
+  return `${prefix}-${suffix}`
+}
+
 export async function crearProducto(input: ProductoInput) {
   const { profile, supabase } = await getAuthenticatedProfile()
 
@@ -17,32 +29,65 @@ export async function crearProducto(input: ProductoInput) {
     return { error: parsed.error.issues[0].message }
   }
 
-  const { data: existing } = await supabase
-    .from('productos')
-    .select('id')
-    .eq('sku', parsed.data.sku)
-    .single()
+  const { stock_inicial, almacen_id_inicial, ...productoData } = parsed.data
 
-  if (existing) {
-    return { error: `El SKU "${parsed.data.sku}" ya está en uso` }
+  // Auto-generar SKU único
+  let sku = generarSku(productoData.categoria)
+  let intentos = 0
+  while (intentos < 5) {
+    const { data: existing } = await supabase
+      .from('productos')
+      .select('id')
+      .eq('sku', sku)
+      .maybeSingle()
+    if (!existing) break
+    sku = generarSku(productoData.categoria)
+    intentos++
   }
 
-  const { data: producto, error } = await supabase
+  const productoId = crypto.randomUUID()
+
+  const { error } = await supabase
     .from('productos')
     .insert({
-      id: crypto.randomUUID(),
-      ...parsed.data,
+      id: productoId,
+      sku,
+      unidad_medida: 'pza',
+      activo: true,
+      ...productoData,
     })
-    .select('id')
-    .single()
 
-  if (error || !producto) {
-    return { error: error?.message ?? 'Error al crear el producto' }
+  if (error) {
+    return { error: error.message ?? 'Error al crear el producto' }
+  }
+
+  // Crear stock inicial si se especificó
+  if (stock_inicial && stock_inicial > 0 && almacen_id_inicial) {
+    await supabase.from('inventario').insert({
+      id: crypto.randomUUID(),
+      producto_id: productoId,
+      almacen_id: almacen_id_inicial,
+      stock_actual: stock_inicial,
+      stock_minimo: 0,
+    })
+
+    await supabase.from('movimientos_inventario').insert({
+      id: crypto.randomUUID(),
+      producto_id: productoId,
+      almacen_id: almacen_id_inicial,
+      tipo: 'entrada',
+      cantidad: stock_inicial,
+      referencia_tipo: 'stock_inicial',
+      referencia_id: null,
+      usuario_id: profile.id,
+      notas: 'Stock inicial al crear producto',
+    })
   }
 
   revalidatePath('/admin/productos')
+  revalidatePath('/admin/inventario')
 
-  return { data: { id: (producto as any).id } }
+  return { data: { id: productoId, sku } }
 }
 
 export async function actualizarProducto(id: string, input: Partial<ProductoInput>) {
@@ -52,22 +97,12 @@ export async function actualizarProducto(id: string, input: Partial<ProductoInpu
     return { error: 'Solo administradores pueden editar productos' }
   }
 
-  const parsed = productoSchema.partial().safeParse(input)
+  // Excluir campos que no se editan
+  const { stock_inicial, almacen_id_inicial, ...updateData } = input as any
+
+  const parsed = productoSchema.omit({ stock_inicial: true, almacen_id_inicial: true }).partial().safeParse(updateData)
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
-  }
-
-  if (parsed.data.sku) {
-    const { data: existing } = await supabase
-      .from('productos')
-      .select('id')
-      .eq('sku', parsed.data.sku)
-      .neq('id', id)
-      .single()
-
-    if (existing) {
-      return { error: `El SKU "${parsed.data.sku}" ya está en uso` }
-    }
   }
 
   const { error } = await supabase
