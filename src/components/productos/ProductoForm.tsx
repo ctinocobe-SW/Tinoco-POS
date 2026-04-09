@@ -40,6 +40,10 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
       costo: 0,
       tasa_iva: 0.16,
       tasa_ieps: 0,
+      vende_pza: false,
+      vende_kg: false,
+      vende_caja: false,
+      vende_bulto: false,
       requiere_caducidad: false,
       codigo_barras: '',
       stock_inicial: 0,
@@ -206,6 +210,58 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
               <option value={0.30}>30%</option>
               <option value={0.53}>53%</option>
             </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Unidades de venta */}
+      <div className="border border-border rounded-lg p-5 space-y-3">
+        <h2 className="text-sm font-medium">Unidades de venta</h2>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Menudeo */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Menudeo — usa precio menudeo
+            </p>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register('vende_pza')}
+                className="w-4 h-4 accent-brand-accent"
+              />
+              <span className="text-sm">Piezas (pza)</span>
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register('vende_kg')}
+                className="w-4 h-4 accent-brand-accent"
+              />
+              <span className="text-sm">Kilogramos (kg)</span>
+            </label>
+          </div>
+
+          {/* Mayoreo */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Mayoreo — usa precio mayoreo
+            </p>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register('vende_caja')}
+                className="w-4 h-4 accent-brand-accent"
+              />
+              <span className="text-sm">Cajas</span>
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register('vende_bulto')}
+                className="w-4 h-4 accent-brand-accent"
+              />
+              <span className="text-sm">Bulto</span>
+            </label>
           </div>
         </div>
       </div>

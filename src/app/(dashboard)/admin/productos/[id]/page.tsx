@@ -28,7 +28,7 @@ export default async function ProductoDetailPage({ params }: PageProps) {
 
   const { data: producto } = await supabase
     .from('productos')
-    .select('id, sku, nombre, descripcion, categoria, unidad_medida, peso_kg, precio_base, costo, tasa_iva, tasa_ieps, requiere_caducidad, codigo_barras, activo, created_at, updated_at')
+    .select('id, sku, nombre, descripcion, categoria, peso_kg, precio_base, precio_mayoreo, costo, tasa_iva, tasa_ieps, vende_pza, vende_kg, vende_caja, vende_bulto, requiere_caducidad, codigo_barras, activo, created_at, updated_at')
     .eq('id', params.id)
     .single()
 
@@ -89,6 +89,10 @@ export default async function ProductoDetailPage({ params }: PageProps) {
           costo: Number(p.costo),
           tasa_iva: Number(p.tasa_iva),
           tasa_ieps: Number(p.tasa_ieps),
+          vende_pza: p.vende_pza ?? false,
+          vende_kg: p.vende_kg ?? false,
+          vende_caja: p.vende_caja ?? false,
+          vende_bulto: p.vende_bulto ?? false,
           requiere_caducidad: p.requiere_caducidad,
           codigo_barras: p.codigo_barras ?? '',
         }}

@@ -127,6 +127,10 @@ export interface Database {
           precio_base: number
           precio_mayoreo: number
           costo: number
+          vende_pza: boolean
+          vende_kg: boolean
+          vende_caja: boolean
+          vende_bulto: boolean
           tasa_iva: number
           tasa_ieps: number
           requiere_caducidad: boolean
