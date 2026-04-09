@@ -36,6 +36,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
       categoria: 'Otros',
       peso_kg: 0,
       precio_base: 0,
+      precio_mayoreo: 0,
       costo: 0,
       tasa_iva: 0.16,
       tasa_ieps: 0,
@@ -142,9 +143,9 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
       <div className="border border-border rounded-lg p-5 space-y-4">
         <h2 className="text-sm font-medium">Precios e impuestos</h2>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="precio_base">Precio base (MXN) *</Label>
+            <Label htmlFor="precio_base">Precio menudeo (MXN) *</Label>
             <Input
               id="precio_base"
               type="number"
@@ -154,6 +155,19 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
               placeholder="0.00"
             />
             {errors.precio_base && <p className="text-xs text-red-600">{errors.precio_base.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="precio_mayoreo">Precio mayoreo (MXN) *</Label>
+            <Input
+              id="precio_mayoreo"
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('precio_mayoreo', { valueAsNumber: true })}
+              placeholder="0.00"
+            />
+            {errors.precio_mayoreo && <p className="text-xs text-red-600">{errors.precio_mayoreo.message}</p>}
           </div>
 
           <div className="space-y-1.5">

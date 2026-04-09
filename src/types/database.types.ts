@@ -125,6 +125,7 @@ export interface Database {
           unidad_medida: string
           peso_kg: number
           precio_base: number
+          precio_mayoreo: number
           costo: number
           tasa_iva: number
           tasa_ieps: number

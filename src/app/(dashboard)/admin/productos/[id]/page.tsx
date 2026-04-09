@@ -85,6 +85,7 @@ export default async function ProductoDetailPage({ params }: PageProps) {
           categoria: p.categoria ?? 'Otros',
           peso_kg: Number(p.peso_kg),
           precio_base: Number(p.precio_base),
+          precio_mayoreo: Number(p.precio_mayoreo ?? 0),
           costo: Number(p.costo),
           tasa_iva: Number(p.tasa_iva),
           tasa_ieps: Number(p.tasa_ieps),
