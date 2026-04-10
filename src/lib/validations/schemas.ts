@@ -30,7 +30,7 @@ export const productoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(200),
   descripcion: z.string().max(1000).optional(),
   categoria: z.enum(CATEGORIAS_PRODUCTO).default('Otros'),
-  precio_base: z.number().nonnegative('El precio menudeo no puede ser negativo'),
+  precio_base: z.number().nonnegative('El precio menudeo no puede ser negativo').default(0),
   precio_mayoreo: z.number().nonnegative('El precio mayoreo no puede ser negativo').default(0),
   costo: z.number().nonnegative().default(0),
   tasa_iva: z.number().min(0).max(1).default(0.16),

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProductoCard } from '@/components/productos/ProductoCard'
+import { ImportarButton } from '@/components/productos/ImportarButton'
 
 export const metadata = { title: 'Productos — POS TINOCO' }
 
@@ -54,12 +55,15 @@ export default async function ProductosPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-heading font-semibold">Productos</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{lista.length} producto{lista.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link href="/admin/productos/nuevo">
-          <Button>
-            <Plus size={16} className="mr-1.5" />
-            Nuevo producto
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <ImportarButton />
+          <Link href="/admin/productos/nuevo">
+            <Button>
+              <Plus size={16} className="mr-1.5" />
+              Nuevo producto
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Búsqueda */}

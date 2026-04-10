@@ -149,7 +149,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="precio_base">Precio menudeo (MXN) *</Label>
+            <Label htmlFor="precio_base">Precio menudeo (MXN)</Label>
             <Input
               id="precio_base"
               type="number"
@@ -162,7 +162,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="precio_mayoreo">Precio mayoreo (MXN) *</Label>
+            <Label htmlFor="precio_mayoreo">Precio mayoreo (MXN)</Label>
             <Input
               id="precio_mayoreo"
               type="number"

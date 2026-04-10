@@ -120,6 +120,59 @@ export async function actualizarProducto(id: string, input: Partial<ProductoInpu
   return { data: { id } }
 }
 
+export async function importarProductos(rows: unknown[]) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (profile.rol !== 'admin') {
+    return { error: 'Solo administradores pueden importar productos' }
+  }
+
+  const importSchema = productoSchema.omit({ stock_inicial: true, almacen_id_inicial: true })
+
+  let creados = 0
+  const errores: { fila: number; mensaje: string }[] = []
+
+  for (let i = 0; i < rows.length; i++) {
+    const parsed = importSchema.safeParse(rows[i])
+    if (!parsed.success) {
+      errores.push({ fila: i + 2, mensaje: parsed.error.issues[0].message })
+      continue
+    }
+
+    let sku = generarSku(parsed.data.categoria)
+    let intentos = 0
+    while (intentos < 5) {
+      const { data: existing } = await supabase
+        .from('productos')
+        .select('id')
+        .eq('sku', sku)
+        .maybeSingle()
+      if (!existing) break
+      sku = generarSku(parsed.data.categoria)
+      intentos++
+    }
+
+    const { error } = await supabase.from('productos').insert({
+      id: crypto.randomUUID(),
+      sku,
+      unidad_medida: 'pza',
+      activo: true,
+      ...parsed.data,
+    })
+
+    if (error) {
+      errores.push({ fila: i + 2, mensaje: error.message })
+    } else {
+      creados++
+    }
+  }
+
+  revalidatePath('/admin/productos')
+  revalidatePath('/admin/inventario')
+
+  return { data: { creados, errores } }
+}
+
 export async function toggleProducto(id: string) {
   const { profile, supabase } = await getAuthenticatedProfile()
 
