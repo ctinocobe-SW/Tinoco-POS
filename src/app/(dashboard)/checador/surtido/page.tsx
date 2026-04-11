@@ -5,7 +5,7 @@ import type { ListaData } from '@/components/surtido/ListaDetalle'
 
 export const metadata = { title: 'Surtido — POS TINOCO' }
 
-export default async function DespachadorSurtidoPage() {
+export default async function CheckadorSurtidoPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -17,7 +17,7 @@ export default async function DespachadorSurtidoPage() {
     .single()
 
   const rol = (profile as any)?.rol
-  if (!rol || !['admin', 'despachador'].includes(rol)) redirect('/')
+  if (!rol || !['admin', 'checador'].includes(rol)) redirect('/')
 
   const { data: listas } = await supabase
     .from('listas_almacen')
@@ -50,5 +50,5 @@ export default async function DespachadorSurtidoPage() {
     })),
   }))
 
-  return <ListasAlmacenSection listas={listasData} rol="despachador" />
+  return <ListasAlmacenSection listas={listasData} rol="checador" />
 }

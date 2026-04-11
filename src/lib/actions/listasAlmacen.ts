@@ -3,6 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { getAuthenticatedProfile } from './helpers'
 
+function revalidateAll() {
+  revalidatePath('/despachador/surtido')
+  revalidatePath('/admin/surtido')
+  revalidatePath('/checador/surtido')
+}
+
 export async function crearListaAlmacen(input: {
   nombre: string
   notas?: string
@@ -11,7 +17,7 @@ export async function crearListaAlmacen(input: {
   const { profile, supabase } = await getAuthenticatedProfile()
 
   if (!['admin', 'despachador'].includes(profile.rol)) {
-    return { error: 'Sin permisos para crear listas de almacén' }
+    return { error: 'Solo admin o despachador pueden crear listas' }
   }
 
   if (!input.nombre.trim()) return { error: 'El nombre es requerido' }
@@ -45,17 +51,15 @@ export async function crearListaAlmacen(input: {
 
   if (itemsError) return { error: itemsError.message }
 
-  revalidatePath('/despachador/surtido')
-  revalidatePath('/admin/surtido')
-
+  revalidateAll()
   return { data: { id: listaId } }
 }
 
 export async function finalizarListaAlmacen(listaId: string) {
   const { profile, supabase } = await getAuthenticatedProfile()
 
-  if (!['admin', 'despachador'].includes(profile.rol)) {
-    return { error: 'Sin permisos' }
+  if (!['admin', 'checador'].includes(profile.rol)) {
+    return { error: 'Solo admin o checador pueden finalizar listas' }
   }
 
   const { error } = await supabase
@@ -65,8 +69,27 @@ export async function finalizarListaAlmacen(listaId: string) {
 
   if (error) return { error: error.message }
 
-  revalidatePath('/despachador/surtido')
-  revalidatePath('/admin/surtido')
+  revalidateAll()
+  return { data: { ok: true } }
+}
+
+export async function toggleItemChecado(itemId: string, checado: boolean) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (!['admin', 'checador'].includes(profile.rol)) {
+    return { error: 'Solo admin o checador pueden verificar ítems' }
+  }
+
+  const { error } = await supabase
+    .from('lista_almacen_items')
+    .update({
+      checado,
+      checado_at: checado ? new Date().toISOString() : null,
+      checado_por: checado ? profile.id : null,
+    })
+    .eq('id', itemId)
+
+  if (error) return { error: error.message }
 
   return { data: { ok: true } }
 }

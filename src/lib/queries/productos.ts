@@ -6,7 +6,7 @@ export async function searchProductos(query: string) {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('productos')
-    .select('id, sku, nombre, precio_base, tasa_iva, tasa_ieps, unidad_medida')
+    .select('id, sku, nombre, precio_base, tasa_iva, tasa_ieps, peso_kg')
     .eq('activo', true)
     .or(`nombre.ilike.%${query}%,sku.ilike.%${query}%`)
     .limit(10)
@@ -19,6 +19,6 @@ export async function searchProductos(query: string) {
     precio_base: number
     tasa_iva: number
     tasa_ieps: number
-    unidad_medida: string
+    peso_kg: number
   }[]
 }

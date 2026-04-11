@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label'
 type ClienteResult = { id: string; nombre: string; rfc: string | null }
 type ProductoResult = {
   id: string; sku: string; nombre: string; precio_base: number
-  tasa_iva: number; tasa_ieps: number; unidad_medida: string
+  tasa_iva: number; tasa_ieps: number; peso_kg: number
 }
 
 export function TicketForm() {
@@ -240,7 +240,7 @@ export function TicketForm() {
                   <tr key={field.id} className="border-t border-border/50">
                     <td className="px-3 py-2">
                       <div className="font-medium">{meta?.nombre ?? '—'}</div>
-                      <div className="text-xs text-muted-foreground">{meta?.sku} · {meta?.unidad_medida}</div>
+                      <div className="text-xs text-muted-foreground">{meta?.sku}</div>
                     </td>
                     <td className="px-3 py-2">
                       <input
