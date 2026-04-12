@@ -131,6 +131,52 @@ export async function actualizarProveedor(proveedorId: string, input: ProveedorI
   return { data: { ok: true } }
 }
 
+export async function setProductosProveedor(proveedorId: string, productoIds: string[]) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Sin permisos' }
+
+  const { error: delError } = await supabase
+    .from('producto_proveedor')
+    .delete()
+    .eq('proveedor_id', proveedorId)
+
+  if (delError) return { error: delError.message }
+
+  if (productoIds.length > 0) {
+    const { error } = await supabase
+      .from('producto_proveedor')
+      .insert(productoIds.map((pid) => ({ producto_id: pid, proveedor_id: proveedorId })))
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath('/admin/configuracion')
+  revalidatePath('/admin/productos')
+  return { data: { ok: true } }
+}
+
+export async function setProveedoresProducto(productoId: string, proveedorIds: string[]) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Sin permisos' }
+
+  const { error: delError } = await supabase
+    .from('producto_proveedor')
+    .delete()
+    .eq('producto_id', productoId)
+
+  if (delError) return { error: delError.message }
+
+  if (proveedorIds.length > 0) {
+    const { error } = await supabase
+      .from('producto_proveedor')
+      .insert(proveedorIds.map((vid) => ({ producto_id: productoId, proveedor_id: vid })))
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath('/admin/configuracion')
+  revalidatePath('/admin/productos')
+  return { data: { ok: true } }
+}
+
 export async function toggleProveedor(proveedorId: string) {
   const { profile, supabase } = await getAuthenticatedProfile()
   if (profile.rol !== 'admin') return { error: 'Sin permisos' }

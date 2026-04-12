@@ -18,7 +18,7 @@ export default async function ConfiguracionPage() {
 
   if ((profile as any)?.rol !== 'admin') redirect('/')
 
-  const [{ data: almacenes }, { data: proveedores }, { data: usuarios }] = await Promise.all([
+  const [{ data: almacenes }, { data: proveedores }, { data: usuarios }, { data: productos }] = await Promise.all([
     supabase
       .from('almacenes')
       .select('id, nombre, ubicacion, tipo, activo')
@@ -30,6 +30,11 @@ export default async function ConfiguracionPage() {
     supabase
       .from('profiles')
       .select('id, nombre, email, rol, activo')
+      .order('nombre', { ascending: true }),
+    supabase
+      .from('productos')
+      .select('id, sku, nombre')
+      .eq('activo', true)
       .order('nombre', { ascending: true }),
   ])
 
@@ -60,6 +65,12 @@ export default async function ConfiguracionPage() {
     activo: u.activo as boolean,
   }))
 
+  const productosList = (productos ?? []).map((p: any) => ({
+    id: p.id as string,
+    sku: p.sku as string,
+    nombre: p.nombre as string,
+  }))
+
   return (
     <div>
       <div className="mb-6">
@@ -69,7 +80,7 @@ export default async function ConfiguracionPage() {
         </p>
       </div>
 
-      <ConfigTabs almacenes={almacenesList} proveedores={proveedoresList} usuarios={usuariosList} />
+      <ConfigTabs almacenes={almacenesList} proveedores={proveedoresList} usuarios={usuariosList} productos={productosList} />
     </div>
   )
 }

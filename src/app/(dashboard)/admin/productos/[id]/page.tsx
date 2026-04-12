@@ -26,13 +26,19 @@ export default async function ProductoDetailPage({ params }: PageProps) {
 
   if ((profile as any)?.rol !== 'admin') redirect('/')
 
-  const { data: producto } = await supabase
-    .from('productos')
-    .select('id, sku, nombre, descripcion, categoria, peso_kg, precio_base, precio_mayoreo, costo, tasa_iva, tasa_ieps, vende_pza, vende_kg, vende_caja, vende_bulto, piezas_por_caja, piezas_por_bulto, requiere_caducidad, fecha_caducidad, activo, created_at, updated_at')
-    .eq('id', params.id)
-    .single()
+  const [{ data: producto }, { data: proveedores }, { data: ppRows }] = await Promise.all([
+    supabase
+      .from('productos')
+      .select('id, sku, nombre, descripcion, categoria, peso_kg, precio_base, precio_mayoreo, costo, tasa_iva, tasa_ieps, vende_pza, vende_kg, vende_caja, vende_bulto, piezas_por_caja, piezas_por_bulto, requiere_caducidad, fecha_caducidad, activo, created_at, updated_at')
+      .eq('id', params.id)
+      .single(),
+    supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre', { ascending: true }),
+    supabase.from('producto_proveedor').select('proveedor_id').eq('producto_id', params.id),
+  ])
 
   if (!producto) notFound()
+
+  const proveedoresIniciales = (ppRows ?? []).map((r: any) => r.proveedor_id as string)
 
   const p = producto as any
 
@@ -79,6 +85,8 @@ export default async function ProductoDetailPage({ params }: PageProps) {
       <h2 className="text-lg font-medium mb-4">Editar producto</h2>
       <ProductoForm
         productoId={p.id}
+        proveedores={(proveedores ?? []) as { id: string; nombre: string }[]}
+        proveedoresIniciales={proveedoresIniciales}
         defaultValues={{
           nombre: p.nombre,
           descripcion: p.descripcion ?? '',

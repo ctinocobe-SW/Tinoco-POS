@@ -32,10 +32,17 @@ interface Proveedor {
   activo: boolean
 }
 
+interface ProductoOption {
+  id: string
+  sku: string
+  nombre: string
+}
+
 interface ConfigTabsProps {
   almacenes: Almacen[]
   proveedores: Proveedor[]
   usuarios: UsuarioRow[]
+  productos: ProductoOption[]
 }
 
 type Tab = 'almacenes' | 'proveedores' | 'usuarios'
@@ -61,7 +68,7 @@ function ToggleButton({ id, activo, onToggle }: { id: string; activo: boolean; o
   )
 }
 
-export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialProveedores, usuarios: initialUsuarios }: ConfigTabsProps) {
+export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialProveedores, usuarios: initialUsuarios, productos }: ConfigTabsProps) {
   const [tab, setTab] = useState<Tab>('almacenes')
 
   // Almacenes state
@@ -333,6 +340,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
         open={proveedorDialog}
         onClose={() => { setProveedorDialog(false); setEditProveedor(null) }}
         proveedor={editProveedor}
+        productos={productos}
       />
       <UsuarioDialog
         open={usuarioDialog}

@@ -10,6 +10,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { productoSchema, CATEGORIAS_PRODUCTO } from '@/lib/validations/schemas'
 import type { ProductoInput, CategoriaProducto } from '@/lib/validations/schemas'
 import { crearProducto, actualizarProducto } from '@/lib/actions/productos'
+import { setProveedoresProducto } from '@/lib/actions/configuracion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,11 +18,14 @@ import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils/cn'
 
 interface Almacen { id: string; nombre: string }
+interface ProveedorOption { id: string; nombre: string }
 
 interface ProductoFormProps {
   productoId?: string
   defaultValues?: Partial<ProductoInput>
   almacenes?: Almacen[]
+  proveedores?: ProveedorOption[]
+  proveedoresIniciales?: string[]
 }
 
 function formatTasa(t: number) {
@@ -29,10 +33,11 @@ function formatTasa(t: number) {
   return pct % 1 === 0 ? `${pct}%` : `${pct.toFixed(1)}%`
 }
 
-export function ProductoForm({ productoId, defaultValues, almacenes = [] }: ProductoFormProps) {
+export function ProductoForm({ productoId, defaultValues, almacenes = [], proveedores = [], proveedoresIniciales = [] }: ProductoFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [showImpuestos, setShowImpuestos] = useState(false)
+  const [proveedoresSeleccionados, setProveedoresSeleccionados] = useState<string[]>(proveedoresIniciales)
   const isEdit = !!productoId
 
   const form = useForm<ProductoInput>({
@@ -77,16 +82,28 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
   const tasaIva = watch('tasa_iva') ?? 0.16
   const tasaIeps = watch('tasa_ieps') ?? 0
 
+  const toggleProveedor = (id: string) => {
+    setProveedoresSeleccionados((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
   const onSubmit = async (data: ProductoInput) => {
     setSubmitting(true)
     try {
-      const result = isEdit
-        ? await actualizarProducto(productoId, data)
-        : await crearProducto(data)
+      let pid = productoId
+      if (isEdit) {
+        const result = await actualizarProducto(productoId, data)
+        if (result.error) { toast.error(result.error); return }
+      } else {
+        const result = await crearProducto(data)
+        if (result.error) { toast.error(result.error); return }
+        pid = result.data?.id
+      }
 
-      if (result.error) {
-        toast.error(result.error)
-        return
+      if (pid) {
+        const rel = await setProveedoresProducto(pid, proveedoresSeleccionados)
+        if (rel.error) { toast.error(rel.error); return }
       }
 
       toast.success(isEdit ? 'Producto actualizado' : 'Producto creado correctamente')
@@ -397,6 +414,35 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
                 </Select>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Proveedor */}
+      {proveedores.length > 0 && (
+        <div className="border border-border rounded-lg p-5 space-y-3">
+          <div>
+            <h2 className="text-sm font-medium">Proveedor</h2>
+            <p className="text-xs text-muted-foreground">Selecciona quién surte este producto</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {proveedores.map((prov) => {
+              const selected = proveedoresSeleccionados.includes(prov.id)
+              return (
+                <button
+                  key={prov.id}
+                  type="button"
+                  onClick={() => toggleProveedor(prov.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    selected
+                      ? 'bg-brand-accent text-white border-brand-accent'
+                      : 'bg-white text-muted-foreground border-border hover:border-brand-accent hover:text-foreground'
+                  }`}
+                >
+                  {prov.nombre}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
