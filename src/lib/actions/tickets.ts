@@ -24,7 +24,7 @@ export async function crearTicket(input: CrearTicketInput) {
   const productoIds = items.map((i) => i.producto_id)
   const { data: productos, error: prodError } = await supabase
     .from('productos')
-    .select('id, precio_base, tasa_iva, tasa_ieps')
+    .select('id, precio_base')
     .in('id', productoIds)
 
   if (prodError || !productos) {
@@ -33,10 +33,8 @@ export async function crearTicket(input: CrearTicketInput) {
 
   const productosMap = new Map(productos.map((p: any) => [p.id, p]))
 
-  // Calcular totales server-side
+  // Calcular totales — precio directo sin desglosar IVA
   let subtotal = 0
-  let iva = 0
-  let ieps = 0
   let descuentoTotal = 0
 
   const itemsCalculados = []
@@ -46,12 +44,8 @@ export async function crearTicket(input: CrearTicketInput) {
 
     const precio = item.precio_unitario > 0 ? item.precio_unitario : (prod as any).precio_base
     const lineSubtotal = precio * item.cantidad - item.descuento
-    const lineIva = lineSubtotal * (prod as any).tasa_iva
-    const lineIeps = lineSubtotal * (prod as any).tasa_ieps
 
     subtotal += lineSubtotal
-    iva += lineIva
-    ieps += lineIeps
     descuentoTotal += item.descuento
 
     itemsCalculados.push({
@@ -63,7 +57,7 @@ export async function crearTicket(input: CrearTicketInput) {
     })
   }
 
-  const total = subtotal + iva + ieps
+  const total = subtotal
 
   // Insertar ticket
   const { data: ticket, error: ticketError } = await supabase
@@ -75,8 +69,8 @@ export async function crearTicket(input: CrearTicketInput) {
       almacen_id: almacen_id ?? profile.almacen_id,
       estado: 'pendiente_aprobacion',
       subtotal,
-      iva,
-      ieps,
+      iva: 0,
+      ieps: 0,
       descuento: descuentoTotal,
       total,
       notas: notas ?? null,

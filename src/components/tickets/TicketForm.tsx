@@ -19,8 +19,7 @@ import { Label } from '@/components/ui/label'
 
 type ClienteResult = { id: string; nombre: string; rfc: string | null }
 type ProductoResult = {
-  id: string; sku: string; nombre: string; precio_base: number
-  tasa_iva: number; tasa_ieps: number; peso_kg: number
+  id: string; sku: string; nombre: string; precio_base: number; peso_kg: number
 }
 
 export function TicketForm() {
@@ -107,22 +106,12 @@ export function TicketForm() {
     setShowProductoDropdown(false)
   }
 
-  // Calcular totales
+  // Calcular total — precio directo sin IVA
   const watchItems = form.watch('items')
-  let subtotal = 0
-  let iva = 0
-  let ieps = 0
-
+  let total = 0
   watchItems.forEach((item) => {
-    const lineSub = (item.precio_unitario ?? 0) * (item.cantidad ?? 0) - (item.descuento ?? 0)
-    const meta = productosMeta.get(item.producto_id)
-    subtotal += lineSub
-    if (meta) {
-      iva += lineSub * meta.tasa_iva
-      ieps += lineSub * meta.tasa_ieps
-    }
+    total += (item.precio_unitario ?? 0) * (item.cantidad ?? 0) - (item.descuento ?? 0)
   })
-  const total = subtotal + iva + ieps
 
   const onSubmit = async (data: CrearTicketInput) => {
     setSubmitting(true)
@@ -295,25 +284,11 @@ export function TicketForm() {
         <p className="text-xs text-red-600">{form.formState.errors.items.message}</p>
       )}
 
-      {/* Totales */}
+      {/* Total */}
       {fields.length > 0 && (
         <div className="flex justify-end">
-          <div className="w-64 space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatMXN(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">IVA</span>
-              <span>{formatMXN(iva)}</span>
-            </div>
-            {ieps > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">IEPS</span>
-                <span>{formatMXN(ieps)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-semibold border-t border-border pt-1">
+          <div className="w-48 text-sm">
+            <div className="flex justify-between font-semibold border-t border-border pt-2">
               <span>Total</span>
               <span>{formatMXN(total)}</span>
             </div>
