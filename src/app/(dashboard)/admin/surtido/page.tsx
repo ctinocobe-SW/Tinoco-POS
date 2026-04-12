@@ -22,6 +22,7 @@ export default async function AdminSurtidoPage() {
     .from('listas_almacen')
     .select(`
       id, nombre, notas, estado, created_at,
+      almacenes(nombre),
       lista_almacen_items(
         id, cantidad, notas, checado,
         productos(nombre, sku, peso_kg)
@@ -36,6 +37,7 @@ export default async function AdminSurtidoPage() {
     notas: l.notas ?? null,
     estado: l.estado,
     created_at: l.created_at,
+    almacen_nombre: l.almacenes?.nombre ?? null,
     items: (l.lista_almacen_items ?? []).map((i: any) => ({
       id: i.id,
       cantidad: Number(i.cantidad),

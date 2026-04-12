@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Search, Trash2, Plus } from 'lucide-react'
+import { Search, Trash2 } from 'lucide-react'
 import { Dialog } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { searchProductos } from '@/lib/queries/productos'
+import { getAlmacenes } from '@/lib/queries/almacenes'
 import { crearListaAlmacen } from '@/lib/actions/listasAlmacen'
 
 interface ListaItem {
@@ -26,16 +27,30 @@ interface ListaAlmacenDialogProps {
 export function ListaAlmacenDialog({ open, onClose }: ListaAlmacenDialogProps) {
   const [nombre, setNombre] = useState('')
   const [notas, setNotas] = useState('')
+  const [almacenId, setAlmacenId] = useState('')
+  const [bodegas, setBodegas] = useState<{ id: string; nombre: string }[]>([])
   const [items, setItems] = useState<ListaItem[]>([])
   const [productoQuery, setProductoQuery] = useState('')
   const [productoResults, setProductoResults] = useState<any[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // Cargar bodegas al abrir
+  useEffect(() => {
+    if (open && bodegas.length === 0) {
+      getAlmacenes().then((all) => {
+        const b = all.filter((a) => a.tipo === 'bodega')
+        setBodegas(b)
+        if (b.length === 1) setAlmacenId(b[0].id)
+      })
+    }
+  }, [open])
+
   useEffect(() => {
     if (!open) {
       setNombre('')
       setNotas('')
+      setAlmacenId('')
       setItems([])
       setProductoQuery('')
     }
@@ -96,6 +111,7 @@ export function ListaAlmacenDialog({ open, onClose }: ListaAlmacenDialogProps) {
     const result = await crearListaAlmacen({
       nombre,
       notas: notas || undefined,
+      almacen_id: almacenId || undefined,
       items: items.map((i) => ({
         producto_id: i.producto_id,
         cantidad: i.cantidad,
@@ -125,14 +141,33 @@ export function ListaAlmacenDialog({ open, onClose }: ListaAlmacenDialogProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="la-notas">Notas</Label>
-            <Input
-              id="la-notas"
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              placeholder="Observaciones..."
-            />
+            <Label htmlFor="la-bodega">Bodega</Label>
+            {bodegas.length === 0 ? (
+              <p className="text-xs text-muted-foreground pt-2">Sin bodegas registradas</p>
+            ) : (
+              <select
+                id="la-bodega"
+                value={almacenId}
+                onChange={(e) => setAlmacenId(e.target.value)}
+                className="w-full h-9 px-3 border border-border rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand-accent"
+              >
+                <option value="">Sin asignar</option>
+                {bodegas.map((b) => (
+                  <option key={b.id} value={b.id}>{b.nombre}</option>
+                ))}
+              </select>
+            )}
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="la-notas">Notas</Label>
+          <Input
+            id="la-notas"
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            placeholder="Observaciones..."
+          />
         </div>
 
         {/* Buscador */}

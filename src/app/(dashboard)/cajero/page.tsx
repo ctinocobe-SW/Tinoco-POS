@@ -44,7 +44,7 @@ export default async function CajaPage() {
     estado: t.estado,
     total: Number(t.total),
     created_at: t.created_at as string,
-    cliente_nombre: t.clientes?.nombre as string | null,
+    cliente_nombre: t.clientes?.nombre ?? undefined,
   }))
 
   const cobrados = (cobradosHoy ?? []).map((t: any) => ({
@@ -53,7 +53,7 @@ export default async function CajaPage() {
     estado: t.estado,
     total: Number(t.total),
     created_at: t.created_at as string,
-    cliente_nombre: t.clientes?.nombre as string | null,
+    cliente_nombre: t.clientes?.nombre ?? undefined,
   }))
 
   const totalCobradoHoy = cobrados.reduce((sum, t) => sum + t.total, 0)

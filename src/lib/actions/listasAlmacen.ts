@@ -12,6 +12,7 @@ function revalidateAll() {
 export async function crearListaAlmacen(input: {
   nombre: string
   notas?: string
+  almacen_id?: string
   items: { producto_id: string; cantidad: number; notas?: string }[]
 }) {
   const { profile, supabase } = await getAuthenticatedProfile()
@@ -31,6 +32,7 @@ export async function crearListaAlmacen(input: {
       id: listaId,
       nombre: input.nombre.trim(),
       notas: input.notas || null,
+      almacen_id: input.almacen_id || null,
       estado: 'borrador',
       creado_por: profile.id,
     })

@@ -27,6 +27,7 @@ export interface ListaData {
   notas: string | null
   estado: string
   created_at: string
+  almacen_nombre: string | null
   items: ListaItem[]
 }
 
@@ -106,6 +107,9 @@ export function ListaDetalle({ lista: initialLista, rol, defaultExpanded = false
                 <Scale size={11} />
                 {formatPeso(totalPeso)}
               </span>
+            )}
+            {lista.almacen_nombre && (
+              <span className="font-medium text-foreground/70">{lista.almacen_nombre}</span>
             )}
             <span>{checados}/{total} chequeados</span>
             <span>{formatDate(lista.created_at)}</span>
