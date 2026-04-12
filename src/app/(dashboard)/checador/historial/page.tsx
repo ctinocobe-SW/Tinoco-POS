@@ -20,7 +20,7 @@ export default async function CheckadorHistorialPage() {
     .single()
 
   const rol = (profile as any)?.rol
-  if (!rol || !['admin', 'checador'].includes(rol)) redirect('/')
+  if (!rol || !['admin', 'checador', 'cajero'].includes(rol)) redirect('/')
 
   // El checador ve solo sus tickets verificados; el admin ve todos
   let query = supabase

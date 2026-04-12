@@ -20,7 +20,7 @@ export default async function VerificarTicketPage({ params }: { params: { id: st
     .single()
 
   const rol = (profile as any)?.rol
-  if (!rol || !['admin', 'checador'].includes(rol)) redirect('/')
+  if (!rol || !['admin', 'checador', 'cajero'].includes(rol)) redirect('/')
 
   const { data: ticket } = await supabase
     .from('tickets')

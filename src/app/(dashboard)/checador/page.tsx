@@ -16,7 +16,7 @@ export default async function ChecadorPage() {
     .single()
 
   const rol = (data as any)?.rol
-  if (!rol || !['admin', 'checador'].includes(rol)) redirect('/')
+  if (!rol || !['admin', 'checador', 'cajero'].includes(rol)) redirect('/')
 
   const { data: tickets } = await supabase
     .from('tickets')

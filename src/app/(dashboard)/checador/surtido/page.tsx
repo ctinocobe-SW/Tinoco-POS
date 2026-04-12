@@ -17,7 +17,7 @@ export default async function CheckadorSurtidoPage() {
     .single()
 
   const rol = (profile as any)?.rol
-  if (!rol || !['admin', 'checador'].includes(rol)) redirect('/')
+  if (!rol || !['admin', 'checador', 'cajero'].includes(rol)) redirect('/')
 
   const { data: listas } = await supabase
     .from('listas_almacen')

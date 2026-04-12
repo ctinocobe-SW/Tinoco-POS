@@ -43,6 +43,9 @@ const navByRole: Record<UserRole, { label: string; href: string; icon: React.Ele
   ],
   cajero: [
     { label: 'Caja',           href: '/cajero',               icon: LayoutDashboard },
+    { label: 'Cola',           href: '/checador',             icon: CheckSquare },
+    { label: 'Surtido',        href: '/checador/surtido',     icon: Truck },
+    { label: 'Historial',      href: '/checador/historial',   icon: Receipt },
   ],
 }
 
