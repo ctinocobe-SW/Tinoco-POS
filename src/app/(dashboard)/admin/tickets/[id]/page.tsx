@@ -6,6 +6,7 @@ import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
 import { TicketItemsTable } from '@/components/tickets/TicketItemsTable'
 import { ApprovalActions } from '@/components/tickets/ApprovalActions'
 import { PagareTicketBlock } from '@/components/creditos/PagareTicketBlock'
+import { FacturarButton } from '@/components/tickets/FacturarButton'
 import { formatMXN, formatDateTime } from '@/lib/utils/format'
 
 export const metadata = { title: 'Detalle Ticket — POS TINOCO' }
@@ -25,7 +26,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   const { data: ticket } = await supabase
     .from('tickets')
-    .select('id, folio, estado, subtotal, iva, ieps, descuento, total, notas, motivo_rechazo, created_at, es_credito, credito_id, clientes(nombre, rfc, telefono), profiles!tickets_despachador_id_fkey(nombre)')
+    .select('id, folio, estado, subtotal, iva, ieps, descuento, total, notas, motivo_rechazo, created_at, es_credito, credito_id, facturado, cfdi_uuid, clientes(nombre, rfc, telefono), profiles!tickets_despachador_id_fkey(nombre)')
     .eq('id', params.id)
     .single()
 
@@ -63,7 +64,16 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           <h1 className="text-2xl font-heading font-semibold">{t.folio}</h1>
           <p className="text-sm text-muted-foreground">{formatDateTime(t.created_at)}</p>
         </div>
-        <TicketStatusBadge estado={t.estado} />
+        <div className="flex items-center gap-3">
+          {['despachado', 'facturado', 'cerrado'].includes(t.estado) && (
+            <FacturarButton
+              ticketId={t.id}
+              facturado={t.facturado ?? false}
+              cfdiUuid={t.cfdi_uuid ?? null}
+            />
+          )}
+          <TicketStatusBadge estado={t.estado} />
+        </div>
       </div>
 
       {/* Info */}

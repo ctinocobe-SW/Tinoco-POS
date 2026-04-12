@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus, Check, X, CornerDownLeft, ExternalLink } from 'lucide-react'
+import { Plus, Check, X, CornerDownLeft, ExternalLink, Banknote, DollarSign, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 import { createClient } from '@/lib/supabase/client'
-import { aprobarTicket } from '@/lib/actions/tickets'
+import { aprobarTicket, cancelarTicket, toggleCobroPendiente } from '@/lib/actions/tickets'
 import { formatMXN, formatDateTime } from '@/lib/utils/format'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,7 @@ interface TicketRow {
   aprobado_at: string | null
   verificado_at: string | null
   despachado_at: string | null
+  cobro_pendiente: boolean
   cliente_nombre: string | null
   cliente_rfc: string | null
   despachador_nombre: string | null
@@ -71,6 +73,7 @@ function mapRow(t: any): TicketRow {
     aprobado_at: t.aprobado_at ?? null,
     verificado_at: t.verificado_at ?? null,
     despachado_at: t.despachado_at ?? null,
+    cobro_pendiente: t.cobro_pendiente ?? false,
     cliente_nombre: t.clientes?.nombre ?? null,
     cliente_rfc: t.clientes?.rfc ?? null,
     despachador_nombre: t.despachador?.nombre ?? null,
@@ -177,32 +180,191 @@ function AprobacionPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefet
 }
 
 // ── Panel: En Proceso ──────────────────────────────────────
-function ProcesoPanel({ tickets }: { tickets: TicketRow[] }) {
+function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch: () => void }) {
+  const [isPending, startTransition] = useTransition()
+  const [cancelDialog, setCancelDialog] = useState<string | null>(null) // ticketId
+  const [motivo, setMotivo] = useState('')
+
+  const handleToggleCobro = (ticketId: string, current: boolean) => {
+    startTransition(async () => {
+      const result = await toggleCobroPendiente(ticketId, !current)
+      if (result.error) { toast.error(result.error); return }
+      toast.success(!current ? 'Marcado como cobro pendiente' : 'Cobro registrado')
+      onRefetch()
+    })
+  }
+
+  const handleCancelar = () => {
+    if (!cancelDialog) return
+    startTransition(async () => {
+      const result = await cancelarTicket(cancelDialog, motivo || undefined)
+      if (result.error) { toast.error(result.error); return }
+      toast.success('Ticket cancelado')
+      setCancelDialog(null)
+      setMotivo('')
+      onRefetch()
+    })
+  }
+
   return (
-    <div className="space-y-2">
-      {tickets.length === 0 ? (
-        <p className="text-center py-8 text-sm text-muted-foreground">Sin tickets en proceso</p>
-      ) : tickets.map((t) => (
-        <div key={t.id} className="border border-border rounded-lg p-3">
-          <div className="flex items-start justify-between gap-2 mb-1.5">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-medium">{t.folio}</span>
-                <TicketStatusBadge estado={t.estado} />
+    <>
+      <div className="space-y-2">
+        {tickets.length === 0 ? (
+          <p className="text-center py-8 text-sm text-muted-foreground">Sin tickets en proceso</p>
+        ) : tickets.map((t) => (
+          <div key={t.id} className={`border rounded-lg p-3 ${t.cobro_pendiente ? 'border-orange-300 bg-orange-50/30' : 'border-border'}`}>
+            <div className="flex items-start justify-between gap-2 mb-1.5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-medium">{t.folio}</span>
+                  <Link href={`/admin/tickets/${t.id}`} className="text-muted-foreground hover:text-foreground">
+                    <ExternalLink size={11} />
+                  </Link>
+                  <TicketStatusBadge estado={t.estado} />
+                  {t.cobro_pendiente && (
+                    <span className="text-xs bg-orange-100 text-orange-700 border border-orange-200 rounded px-1 py-0.5 font-medium">
+                      Por cobrar
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 font-medium truncate">{t.cliente_nombre ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">Desp: {t.despachador_nombre ?? '—'}</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5 font-medium truncate">{t.cliente_nombre ?? '—'}</p>
-              <p className="text-xs text-muted-foreground">Desp: {t.despachador_nombre ?? '—'}</p>
+              <div className="flex items-center gap-1 shrink-0">
+                <p className="text-sm font-semibold mr-1">{formatMXN(t.total)}</p>
+                <button
+                  type="button"
+                  onClick={() => handleToggleCobro(t.id, t.cobro_pendiente)}
+                  disabled={isPending}
+                  title={t.cobro_pendiente ? 'Marcar como cobrado' : 'Marcar como cobro pendiente'}
+                  className={`p-1 rounded transition-colors ${t.cobro_pendiente ? 'text-orange-600 hover:text-orange-800' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Banknote size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCancelDialog(t.id)}
+                  disabled={isPending}
+                  title="Cancelar ticket"
+                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 size={11} />
+                  Cancelar
+                </button>
+              </div>
             </div>
-            <p className="text-sm font-semibold shrink-0">{formatMXN(t.total)}</p>
+            {t.despachado_at && (
+              <p className="text-xs text-green-600">Despachado {formatDateTime(t.despachado_at)}</p>
+            )}
+            {t.verificado_at && !t.despachado_at && (
+              <p className="text-xs text-muted-foreground">Verificado {formatDateTime(t.verificado_at)}</p>
+            )}
           </div>
-          {t.despachado_at && (
-            <p className="text-xs text-green-600">Despachado {formatDateTime(t.despachado_at)}</p>
-          )}
-          {t.verificado_at && !t.despachado_at && (
-            <p className="text-xs text-muted-foreground">Verificado {formatDateTime(t.verificado_at)}</p>
-          )}
+        ))}
+      </div>
+
+      <Dialog
+        open={!!cancelDialog}
+        onClose={() => { setCancelDialog(null); setMotivo('') }}
+        title="Cancelar ticket"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">Esta acción no se puede deshacer. El ticket quedará marcado como cancelado.</p>
+          <textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            rows={3}
+            placeholder="Motivo de cancelación (opcional)..."
+            className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent resize-none"
+            autoFocus
+          />
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => { setCancelDialog(null); setMotivo('') }}>Volver</Button>
+            <Button
+              onClick={handleCancelar}
+              disabled={isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isPending ? 'Cancelando...' : 'Cancelar ticket'}
+            </Button>
+          </div>
         </div>
-      ))}
+      </Dialog>
+    </>
+  )
+}
+
+// ── Panel: Por Cobrar ──────────────────────────────────────
+function PorCobrarPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch: () => void }) {
+  const [pending, startTransition] = useTransition()
+
+  const handleCobrado = (ticketId: string) => {
+    startTransition(async () => {
+      const result = await toggleCobroPendiente(ticketId, false)
+      if (result.error) { toast.error(result.error); return }
+      toast.success('Cobro registrado ✓')
+      onRefetch()
+    })
+  }
+
+  if (tickets.length === 0) return null
+
+  return (
+    <div className="mt-6 pt-6 border-t border-border">
+      <div className="flex items-center gap-2 mb-3">
+        <DollarSign size={14} className="text-orange-600" />
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-orange-700">Por Cobrar</h2>
+        <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+          {tickets.length}
+        </span>
+        <span className="ml-auto text-xs font-semibold text-muted-foreground">
+          {formatMXN(tickets.reduce((s, t) => s + t.total, 0))} total
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-orange-200 rounded-lg overflow-hidden">
+          <thead>
+            <tr className="bg-orange-50 text-xs text-muted-foreground uppercase tracking-wide">
+              <th className="px-3 py-2 text-left">Folio</th>
+              <th className="px-3 py-2 text-left">Cliente</th>
+              <th className="px-3 py-2 text-left">Despachador</th>
+              <th className="px-3 py-2 text-right">Total</th>
+              <th className="px-3 py-2 text-right">Despachado</th>
+              <th className="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {tickets.map((t) => (
+              <tr key={t.id} className="border-t border-orange-100">
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs font-medium">{t.folio}</span>
+                    <Link href={`/admin/tickets/${t.id}`} className="text-muted-foreground hover:text-foreground">
+                      <ExternalLink size={10} />
+                    </Link>
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-xs">{t.cliente_nombre ?? '—'}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{t.despachador_nombre ?? '—'}</td>
+                <td className="px-3 py-2 text-right font-mono font-semibold">{formatMXN(t.total)}</td>
+                <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                  {t.despachado_at ? formatDateTime(t.despachado_at) : '—'}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <button
+                    type="button"
+                    onClick={() => handleCobrado(t.id)}
+                    disabled={pending}
+                    className="text-xs bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1 transition-colors disabled:opacity-50"
+                  >
+                    <Check size={11} className="inline mr-1" />Cobrado
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -319,6 +481,7 @@ function CheckadorPanel({ tickets }: { tickets: TicketRow[] }) {
 
 // ── Dashboard principal ────────────────────────────────────
 export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, almacenes }: AdminTicketsDashboardProps) {
+  const router = useRouter()
   const [tickets, setTickets] = useState<TicketRow[]>(initialTickets)
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -327,7 +490,7 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
     const { data } = await supabase
       .from('tickets')
       .select(`
-        id, folio, estado, total, notas, created_at, aprobado_at, verificado_at, despachado_at,
+        id, folio, estado, total, notas, created_at, aprobado_at, verificado_at, despachado_at, cobro_pendiente,
         clientes(nombre, rfc),
         despachador:profiles!tickets_despachador_id_fkey(nombre),
         checador:profiles!tickets_checador_id_fkey(nombre)
@@ -337,9 +500,10 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
       .limit(200)
 
     if (data) setTickets(data.map(mapRow))
-  }, [])
+    router.refresh() // invalida el caché del servidor
+  }, [router])
 
-  // Realtime
+  // Realtime (requiere ALTER PUBLICATION supabase_realtime ADD TABLE tickets en Supabase)
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
@@ -352,9 +516,16 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
     return () => { supabase.removeChannel(channel) }
   }, [refetch])
 
+  // Polling de respaldo: refresca cada 15 segundos aunque realtime no esté activo
+  useEffect(() => {
+    const interval = setInterval(refetch, 15000)
+    return () => clearInterval(interval)
+  }, [refetch])
+
   const pendientes = tickets.filter((t) => t.estado === 'pendiente_aprobacion')
   const enProceso = tickets.filter((t) => PROCESO_ESTADOS.includes(t.estado))
   const checando = tickets.filter((t) => ['en_verificacion', 'con_incidencias'].includes(t.estado))
+  const porCobrar = tickets.filter((t) => t.cobro_pendiente)
 
   return (
     <>
@@ -363,7 +534,7 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
         <div>
           <h1 className="text-2xl font-heading font-semibold">Tickets</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''} · {enProceso.length} en proceso · {checando.length} en verificación
+            {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''} · {enProceso.length} en proceso · {checando.length} en verificación{porCobrar.length > 0 ? ` · ${porCobrar.length} por cobrar` : ''}
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -397,7 +568,7 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
               </span>
             )}
           </div>
-          <ProcesoPanel tickets={enProceso} />
+          <ProcesoPanel tickets={enProceso} onRefetch={refetch} />
         </div>
 
         {/* Col 3: Checador */}
@@ -413,6 +584,8 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
           <CheckadorPanel tickets={checando} />
         </div>
       </div>
+
+      <PorCobrarPanel tickets={porCobrar} onRefetch={refetch} />
 
       <AdminCreateTicketDialog
         open={createOpen}

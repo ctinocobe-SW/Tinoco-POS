@@ -26,7 +26,7 @@ export default async function AdminTicketsPage() {
   const { data: tickets } = await supabase
     .from('tickets')
     .select(`
-      id, folio, estado, total, notas, created_at, aprobado_at, verificado_at, despachado_at,
+      id, folio, estado, total, notas, created_at, aprobado_at, verificado_at, despachado_at, cobro_pendiente,
       clientes(nombre, rfc),
       despachador:profiles!tickets_despachador_id_fkey(nombre),
       checador:profiles!tickets_checador_id_fkey(nombre)
@@ -45,6 +45,7 @@ export default async function AdminTicketsPage() {
     aprobado_at: t.aprobado_at as string | null,
     verificado_at: t.verificado_at as string | null,
     despachado_at: t.despachado_at as string | null,
+    cobro_pendiente: (t.cobro_pendiente as boolean) ?? false,
     cliente_nombre: t.clientes?.nombre as string | null,
     cliente_rfc: t.clientes?.rfc as string | null,
     despachador_nombre: t.despachador?.nombre as string | null,

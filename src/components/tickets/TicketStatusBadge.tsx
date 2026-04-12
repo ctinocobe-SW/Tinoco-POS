@@ -13,6 +13,7 @@ const estadoConfig: Record<TicketEstado, { label: string; variant: 'default' | '
   despachado: { label: 'Despachado', variant: 'success' },
   facturado: { label: 'Facturado', variant: 'info' },
   cerrado: { label: 'Cerrado', variant: 'default' },
+  cancelado: { label: 'Cancelado', variant: 'error' },
 }
 
 interface TicketStatusBadgeProps {

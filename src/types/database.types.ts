@@ -23,12 +23,16 @@ export type TicketEstado =
   | 'despachado'
   | 'facturado'
   | 'cerrado'
+  | 'cancelado'
 export type MovimientoTipo = 'entrada' | 'salida' | 'traspaso' | 'merma' | 'ajuste'
 export type DiscrepanciaTipo = 'faltante' | 'sobrante' | 'incorrecto' | 'danado'
 export type AlmacenTipo = 'bodega' | 'sucursal'
 export type ListaSurtidoEstado = 'borrador' | 'confirmada' | 'en_transito' | 'entregada' | 'cancelada'
 export type CreditoEstado = 'vigente' | 'vencido' | 'liquidado' | 'cancelado'
 export type MetodoPagoCredito = 'efectivo' | 'transferencia' | 'cheque' | 'otro'
+export type FacturaEstado = 'pendiente' | 'timbrada' | 'cancelada' | 'error'
+export type WhatsappMensajeTipo = 'text' | 'image' | 'audio' | 'document' | 'location' | 'interactive'
+export type WhatsappMensajeEstado = 'nuevo' | 'procesando' | 'ticket_creado' | 'ignorado' | 'error'
 
 export interface Database {
   public: {
@@ -108,6 +112,7 @@ export interface Database {
           cfdi_uuid: string | null
           cfdi_folio: string | null
           whatsapp_enviado: boolean
+          cobro_pendiente: boolean
           es_credito: boolean
           credito_id: string | null
           created_at: string
@@ -269,6 +274,88 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['movimientos_inventario']['Row'], 'created_at'>
         Update: Partial<Database['public']['Tables']['movimientos_inventario']['Insert']>
       }
+      configuracion_fiscal: {
+        Row: {
+          id: string
+          rfc: string
+          razon_social: string
+          regimen_fiscal: string
+          codigo_postal: string
+          lugar_expedicion: string
+          pac_nombre: string | null
+          pac_usuario: string | null
+          pac_password_enc: string | null
+          pac_ambiente: string
+          serie: string
+          folio_actual: number
+          logo_url: string | null
+          domicilio: string | null
+          telefono: string | null
+          email_envio: string | null
+          activo: boolean
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['configuracion_fiscal']['Row'], 'id' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['configuracion_fiscal']['Insert']>
+      }
+      facturas: {
+        Row: {
+          id: string
+          ticket_id: string | null
+          cliente_id: string
+          folio_fiscal: string | null
+          serie: string
+          folio: number | null
+          fecha_emision: string | null
+          fecha_timbrado: string | null
+          rfc_receptor: string
+          razon_social_receptor: string
+          uso_cfdi: string
+          regimen_fiscal_receptor: string
+          codigo_postal_receptor: string | null
+          subtotal: number
+          descuento: number
+          iva: number
+          ieps: number
+          total: number
+          estado: FacturaEstado
+          error_mensaje: string | null
+          xml_url: string | null
+          pdf_url: string | null
+          cadena_original: string | null
+          sello_cfd: string | null
+          sello_sat: string | null
+          pac_respuesta: Record<string, unknown> | null
+          cancelada_at: string | null
+          motivo_cancelacion: string | null
+          emitida_por: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['facturas']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['facturas']['Insert']>
+      }
+      whatsapp_mensajes: {
+        Row: {
+          id: string
+          from_number: string
+          display_name: string | null
+          body: string | null
+          tipo: WhatsappMensajeTipo
+          media_url: string | null
+          wa_message_id: string | null
+          wa_timestamp: string | null
+          payload_raw: Record<string, unknown> | null
+          estado: WhatsappMensajeEstado
+          ticket_id: string | null
+          cliente_id: string | null
+          notas_procesado: string | null
+          procesado_por: string | null
+          procesado_at: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['whatsapp_mensajes']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['whatsapp_mensajes']['Insert']>
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -286,6 +373,9 @@ export interface Database {
       lista_surtido_estado: ListaSurtidoEstado
       credito_estado: CreditoEstado
       metodo_pago_credito: MetodoPagoCredito
+      factura_estado: FacturaEstado
+      whatsapp_mensaje_tipo: WhatsappMensajeTipo
+      whatsapp_mensaje_estado: WhatsappMensajeEstado
     }
   }
 }

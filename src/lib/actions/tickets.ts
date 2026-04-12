@@ -340,3 +340,56 @@ export async function finalizarVerificacion(ticketId: string) {
 
   return { data: { estado: nuevoEstado } }
 }
+
+const ESTADOS_CANCELABLES: string[] = [
+  'aprobado', 'en_verificacion', 'verificado', 'con_incidencias', 'despachado'
+]
+
+export async function cancelarTicket(ticketId: string, motivo?: string): Promise<{ error?: string }> {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (profile.rol !== 'admin') {
+    return { error: 'Solo administradores pueden cancelar tickets' }
+  }
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('id, estado')
+    .eq('id', ticketId)
+    .single()
+
+  if (!ticket) return { error: 'Ticket no encontrado' }
+
+  if (!ESTADOS_CANCELABLES.includes((ticket as any).estado)) {
+    return { error: `No se puede cancelar un ticket en estado "${(ticket as any).estado}"` }
+  }
+
+  const { error } = await supabase
+    .from('tickets')
+    .update({ estado: 'cancelado', motivo_rechazo: motivo ?? null })
+    .eq('id', ticketId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/tickets')
+  revalidatePath('/admin')
+  return {}
+}
+
+export async function toggleCobroPendiente(ticketId: string, pendiente: boolean) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (profile.rol !== 'admin') {
+    return { error: 'Solo administradores pueden gestionar cobros' }
+  }
+
+  const { error } = await supabase
+    .from('tickets')
+    .update({ cobro_pendiente: pendiente })
+    .eq('id', ticketId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/tickets')
+  return { data: { cobro_pendiente: pendiente } }
+}
