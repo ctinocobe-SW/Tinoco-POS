@@ -261,6 +261,7 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
 
         {/* Tabla de items */}
         {fields.length > 0 ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -333,6 +334,7 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
               })}
             </tbody>
           </table>
+          </div>
         ) : (
           <div className="px-4 py-8 text-center text-muted-foreground text-sm">
             Busca y agrega productos arriba

@@ -138,6 +138,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
       </div>
 
       <div className="border border-border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -192,6 +193,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {ajusteTarget && (

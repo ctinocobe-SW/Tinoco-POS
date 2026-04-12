@@ -217,6 +217,7 @@ export function TicketForm() {
       {/* Items table */}
       {fields.length > 0 && (
         <div className="border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-brand-surface text-muted-foreground">
@@ -286,6 +287,7 @@ export function TicketForm() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

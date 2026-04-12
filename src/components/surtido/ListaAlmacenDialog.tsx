@@ -164,6 +164,7 @@ export function ListaAlmacenDialog({ open, onClose }: ListaAlmacenDialogProps) {
         {/* Items */}
         {items.length > 0 && (
           <div className="border border-border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -203,6 +204,7 @@ export function ListaAlmacenDialog({ open, onClose }: ListaAlmacenDialogProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 

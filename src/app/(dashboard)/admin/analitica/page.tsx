@@ -119,7 +119,7 @@ export default async function AnaliticaPage() {
       <h1 className="text-2xl font-heading font-semibold mb-6">Analítica</h1>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div className="border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
             <TrendingUp size={14} />
@@ -157,15 +157,15 @@ export default async function AnaliticaPage() {
       </div>
 
       {/* Gráficas */}
-      <div className="grid grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
         {/* Ventas por día */}
-        <div className="col-span-3 border border-border rounded-lg p-5">
+        <div className="lg:col-span-3 border border-border rounded-lg p-5">
           <h2 className="text-sm font-medium mb-4">Ventas por día — últimos 30 días</h2>
           <VentasPorDiaChart data={ventasPorDia} />
         </div>
 
         {/* Top productos */}
-        <div className="col-span-2 border border-border rounded-lg p-5">
+        <div className="lg:col-span-2 border border-border rounded-lg p-5">
           <h2 className="text-sm font-medium mb-4">Top productos (por unidades)</h2>
           <TopProductosChart data={topProductos} />
         </div>
@@ -178,6 +178,7 @@ export default async function AnaliticaPage() {
             <AlertTriangle size={14} className="text-amber-600" />
             <h2 className="text-sm font-medium text-amber-800">Productos bajo mínimo de stock</h2>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-amber-100 bg-amber-50/50 text-xs text-amber-700 uppercase tracking-wide">
@@ -202,6 +203,7 @@ export default async function AnaliticaPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

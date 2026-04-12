@@ -141,6 +141,7 @@ export function ListaDetalle({ lista: initialLista, rol, defaultExpanded = false
           {total === 0 ? (
             <p className="px-4 py-6 text-sm text-muted-foreground text-center">Sin productos en esta lista</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -206,6 +207,7 @@ export function ListaDetalle({ lista: initialLista, rol, defaultExpanded = false
                 </tr>
               </tfoot>
             </table>
+            </div>
           )}
 
           {/* Acciones */}

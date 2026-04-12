@@ -253,6 +253,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
           </div>
 
           {fields.length > 0 ? (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-muted-foreground uppercase tracking-wide">
@@ -309,6 +310,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                 })}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="px-4 py-6 text-center text-sm text-muted-foreground">
               Busca y agrega productos arriba

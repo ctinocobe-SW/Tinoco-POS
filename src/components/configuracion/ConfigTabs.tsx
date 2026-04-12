@@ -143,6 +143,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
             </div>
           ) : (
             <div className="border border-border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -179,6 +180,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
@@ -200,6 +202,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
             </div>
           ) : (
             <div className="border border-border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -241,6 +244,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
@@ -262,6 +266,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
             </div>
           ) : (
             <div className="border border-border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -313,6 +318,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
