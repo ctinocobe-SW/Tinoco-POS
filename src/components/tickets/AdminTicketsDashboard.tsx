@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus, Check, X, CornerDownLeft, ExternalLink, Banknote, DollarSign, Trash2 } from 'lucide-react'
+import { Plus, Check, X, CornerDownLeft, ExternalLink, Banknote, DollarSign, Trash2, Truck, RotateCcw, Timer } from 'lucide-react'
 import Link from 'next/link'
 
 import { createClient } from '@/lib/supabase/client'
-import { aprobarTicket, cancelarTicket, toggleCobroPendiente } from '@/lib/actions/tickets'
+import { aprobarTicket, cancelarTicket, toggleCobroPendiente, entregarTicket, volverAChecar } from '@/lib/actions/tickets'
 import { formatMXN, formatDateTime } from '@/lib/utils/format'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -58,8 +58,9 @@ const ACTIVE_ESTADOS: TicketEstado[] = [
   'pendiente_aprobacion', 'aprobado', 'en_verificacion', 'verificado', 'con_incidencias', 'despachado'
 ]
 
+// En Proceso: todo lo activo excepto pendiente_aprobacion y despachado
 const PROCESO_ESTADOS: TicketEstado[] = [
-  'aprobado', 'verificado', 'despachado'
+  'aprobado', 'en_verificacion', 'verificado', 'con_incidencias'
 ]
 
 function mapRow(t: any): TicketRow {
@@ -79,6 +80,42 @@ function mapRow(t: any): TicketRow {
     despachador_nombre: t.despachador?.nombre ?? null,
     checador_nombre: t.checador?.nombre ?? null,
   }
+}
+
+// ── Cronómetro ────────────────────────────────────────────
+function TicketTimer({ aprobadoAt }: { aprobadoAt: string | null }) {
+  const [segundos, setSegundos] = useState(0)
+
+  useEffect(() => {
+    if (!aprobadoAt) return
+    const inicio = new Date(aprobadoAt).getTime()
+    const tick = () => setSegundos(Math.floor((Date.now() - inicio) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [aprobadoAt])
+
+  if (!aprobadoAt) return null
+
+  const h = Math.floor(segundos / 3600)
+  const m = Math.floor((segundos % 3600) / 60)
+  const s = segundos % 60
+  const display = h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+
+  const color = segundos < 600
+    ? 'text-green-600'
+    : segundos < 1200
+    ? 'text-amber-600'
+    : 'text-red-600'
+
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-mono font-semibold ${color}`}>
+      <Timer size={11} />
+      {display}
+    </span>
+  )
 }
 
 // ── Panel: Aprobación ──────────────────────────────────────
@@ -182,14 +219,37 @@ function AprobacionPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefet
 // ── Panel: En Proceso ──────────────────────────────────────
 function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch: () => void }) {
   const [isPending, startTransition] = useTransition()
-  const [cancelDialog, setCancelDialog] = useState<string | null>(null) // ticketId
+  const [cancelDialog, setCancelDialog] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
+  // Guardamos el tiempo actual del timer al momento de entregar
+  const [timerSegundos, setTimerSegundos] = useState<Map<string, number>>(new Map())
 
   const handleToggleCobro = (ticketId: string, current: boolean) => {
     startTransition(async () => {
       const result = await toggleCobroPendiente(ticketId, !current)
       if (result.error) { toast.error(result.error); return }
       toast.success(!current ? 'Marcado como cobro pendiente' : 'Cobro registrado')
+      onRefetch()
+    })
+  }
+
+  const handleEntregar = (ticketId: string, aprobadoAt: string | null) => {
+    const segundos = aprobadoAt
+      ? Math.floor((Date.now() - new Date(aprobadoAt).getTime()) / 1000)
+      : undefined
+    startTransition(async () => {
+      const result = await entregarTicket(ticketId, segundos)
+      if (result.error) { toast.error(result.error); return }
+      toast.success('Pedido entregado')
+      onRefetch()
+    })
+  }
+
+  const handleVolverAChecar = (ticketId: string) => {
+    startTransition(async () => {
+      const result = await volverAChecar(ticketId)
+      if (result.error) { toast.error(result.error); return }
+      toast.success('Ticket enviado de nuevo al checador')
       onRefetch()
     })
   }
@@ -206,6 +266,12 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
     })
   }
 
+  const puedeEntregar = (estado: TicketEstado) =>
+    ['aprobado', 'en_verificacion', 'verificado', 'con_incidencias'].includes(estado)
+
+  const puedeVolverAChecar = (estado: TicketEstado) =>
+    ['verificado', 'con_incidencias'].includes(estado)
+
   return (
     <>
       <div className="space-y-2">
@@ -213,9 +279,10 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
           <p className="text-center py-8 text-sm text-muted-foreground">Sin tickets en proceso</p>
         ) : tickets.map((t) => (
           <div key={t.id} className={`border rounded-lg p-3 ${t.cobro_pendiente ? 'border-orange-300 bg-orange-50/30' : 'border-border'}`}>
+            {/* Encabezado */}
             <div className="flex items-start justify-between gap-2 mb-1.5">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-xs font-medium">{t.folio}</span>
                   <Link href={`/admin/tickets/${t.id}`} className="text-muted-foreground hover:text-foreground">
                     <ExternalLink size={11} />
@@ -230,35 +297,55 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
                 <p className="text-xs text-muted-foreground mt-0.5 font-medium truncate">{t.cliente_nombre ?? '—'}</p>
                 <p className="text-xs text-muted-foreground">Desp: {t.despachador_nombre ?? '—'}</p>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <p className="text-sm font-semibold mr-1">{formatMXN(t.total)}</p>
-                <button
-                  type="button"
-                  onClick={() => handleToggleCobro(t.id, t.cobro_pendiente)}
-                  disabled={isPending}
-                  title={t.cobro_pendiente ? 'Marcar como cobrado' : 'Marcar como cobro pendiente'}
-                  className={`p-1 rounded transition-colors ${t.cobro_pendiente ? 'text-orange-600 hover:text-orange-800' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Banknote size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCancelDialog(t.id)}
-                  disabled={isPending}
-                  title="Cancelar ticket"
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
-                >
-                  <Trash2 size={11} />
-                  Cancelar
-                </button>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <p className="text-sm font-semibold">{formatMXN(t.total)}</p>
+                <TicketTimer aprobadoAt={t.aprobado_at} />
               </div>
             </div>
-            {t.despachado_at && (
-              <p className="text-xs text-green-600">Despachado {formatDateTime(t.despachado_at)}</p>
-            )}
-            {t.verificado_at && !t.despachado_at && (
-              <p className="text-xs text-muted-foreground">Verificado {formatDateTime(t.verificado_at)}</p>
-            )}
+
+            {/* Botones de acción */}
+            <div className="flex items-center gap-1.5 flex-wrap mt-2">
+              {puedeEntregar(t.estado) && (
+                <button
+                  type="button"
+                  onClick={() => handleEntregar(t.id, t.aprobado_at)}
+                  disabled={isPending}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-green-700 border border-green-300 hover:bg-green-50 transition-colors disabled:opacity-50"
+                >
+                  <Truck size={11} />
+                  Entregar
+                </button>
+              )}
+              {puedeVolverAChecar(t.estado) && (
+                <button
+                  type="button"
+                  onClick={() => handleVolverAChecar(t.id)}
+                  disabled={isPending}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-xs text-blue-700 border border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                >
+                  <RotateCcw size={11} />
+                  Volver a checar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleToggleCobro(t.id, t.cobro_pendiente)}
+                disabled={isPending}
+                title={t.cobro_pendiente ? 'Marcar como cobrado' : 'Marcar cobro pendiente'}
+                className={`p-1 rounded transition-colors ${t.cobro_pendiente ? 'text-orange-600 hover:text-orange-800' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <Banknote size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCancelDialog(t.id)}
+                disabled={isPending}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs text-red-600 border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={11} />
+                Cancelar
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -280,11 +367,7 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
           />
           <div className="flex gap-3 justify-end">
             <Button variant="outline" onClick={() => { setCancelDialog(null); setMotivo('') }}>Volver</Button>
-            <Button
-              onClick={handleCancelar}
-              disabled={isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
+            <Button onClick={handleCancelar} disabled={isPending} className="bg-red-600 hover:bg-red-700 text-white">
               {isPending ? 'Cancelando...' : 'Cancelar ticket'}
             </Button>
           </div>
@@ -400,10 +483,7 @@ function CheckadorPanel({ tickets }: { tickets: TicketRow[] }) {
   }
 
   const DISCREPANCIA_LABELS: Record<string, string> = {
-    faltante: 'Faltante',
-    sobrante: 'Sobrante',
-    incorrecto: 'Incorrecto',
-    danado: 'Dañado',
+    faltante: 'Faltante', sobrante: 'Sobrante', incorrecto: 'Incorrecto', danado: 'Dañado',
   }
 
   return (
@@ -500,36 +580,30 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
       .limit(200)
 
     if (data) setTickets(data.map(mapRow))
-    router.refresh() // invalida el caché del servidor
+    router.refresh()
   }, [router])
 
-  // Realtime (requiere ALTER PUBLICATION supabase_realtime ADD TABLE tickets en Supabase)
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
       .channel('admin-tickets-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
-        refetch()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => { refetch() })
       .subscribe()
-
     return () => { supabase.removeChannel(channel) }
   }, [refetch])
 
-  // Polling de respaldo: refresca cada 15 segundos aunque realtime no esté activo
   useEffect(() => {
     const interval = setInterval(refetch, 15000)
     return () => clearInterval(interval)
   }, [refetch])
 
   const pendientes = tickets.filter((t) => t.estado === 'pendiente_aprobacion')
-  const enProceso = tickets.filter((t) => PROCESO_ESTADOS.includes(t.estado))
-  const checando = tickets.filter((t) => ['en_verificacion', 'con_incidencias'].includes(t.estado))
-  const porCobrar = tickets.filter((t) => t.cobro_pendiente)
+  const enProceso  = tickets.filter((t) => PROCESO_ESTADOS.includes(t.estado))
+  const checando   = tickets.filter((t) => ['en_verificacion', 'con_incidencias'].includes(t.estado))
+  const porCobrar  = tickets.filter((t) => t.cobro_pendiente && t.estado === 'despachado')
 
   return (
     <>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-heading font-semibold">Tickets</h1>
@@ -543,9 +617,7 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
         </Button>
       </div>
 
-      {/* 3 columnas */}
       <div className="grid grid-cols-3 gap-5">
-        {/* Col 1: Aprobación */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Aprobación</h2>
@@ -558,7 +630,6 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
           <AprobacionPanel tickets={pendientes} onRefetch={refetch} />
         </div>
 
-        {/* Col 2: En Proceso */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">En Proceso</h2>
@@ -571,7 +642,6 @@ export function AdminTicketsDashboard({ tickets: initialTickets, despachadores, 
           <ProcesoPanel tickets={enProceso} onRefetch={refetch} />
         </div>
 
-        {/* Col 3: Checador */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Checador</h2>

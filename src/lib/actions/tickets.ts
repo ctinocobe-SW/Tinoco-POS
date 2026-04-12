@@ -408,6 +408,68 @@ export async function cancelarTicket(ticketId: string, motivo?: string): Promise
   return {}
 }
 
+export async function entregarTicket(ticketId: string, tiempoSegundos?: number) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Solo administradores pueden entregar tickets' }
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('id, estado')
+    .eq('id', ticketId)
+    .single()
+
+  if (!ticket) return { error: 'Ticket no encontrado' }
+
+  const estadosEntregables = ['aprobado', 'en_verificacion', 'verificado', 'con_incidencias']
+  if (!estadosEntregables.includes((ticket as any).estado)) {
+    return { error: `No se puede entregar un ticket en estado "${(ticket as any).estado}"` }
+  }
+
+  const { error } = await supabase
+    .from('tickets')
+    .update({
+      estado: 'despachado',
+      despachado_at: new Date().toISOString(),
+      tiempo_despacho_segundos: tiempoSegundos ?? null,
+    })
+    .eq('id', ticketId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/tickets')
+  revalidatePath('/admin')
+  return { data: { ok: true } }
+}
+
+export async function volverAChecar(ticketId: string) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Solo administradores pueden reenviar tickets al checador' }
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('id, estado')
+    .eq('id', ticketId)
+    .single()
+
+  if (!ticket) return { error: 'Ticket no encontrado' }
+
+  const estadosReenviables = ['verificado', 'con_incidencias']
+  if (!estadosReenviables.includes((ticket as any).estado)) {
+    return { error: `No se puede reenviar al checador un ticket en estado "${(ticket as any).estado}"` }
+  }
+
+  const { error } = await supabase
+    .from('tickets')
+    .update({ estado: 'en_verificacion', verificado_at: null })
+    .eq('id', ticketId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/tickets')
+  revalidatePath('/checador')
+  return { data: { ok: true } }
+}
+
 export async function toggleCobroPendiente(ticketId: string, pendiente: boolean) {
   const { profile, supabase } = await getAuthenticatedProfile()
 
