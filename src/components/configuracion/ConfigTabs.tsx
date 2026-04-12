@@ -266,7 +266,7 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
                 <thead>
                   <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
                     <th className="px-4 py-2.5 text-left">Nombre</th>
-                    <th className="px-4 py-2.5 text-left">Correo</th>
+                    <th className="px-4 py-2.5 text-left">Usuario</th>
                     <th className="px-4 py-2.5 text-left w-36">Rol</th>
                     <th className="px-4 py-2.5 text-center w-24">Estado</th>
                     <th className="px-4 py-2.5 w-28"></th>
@@ -276,7 +276,9 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
                   {usuarios.map((u) => (
                     <tr key={u.id} className="border-b border-border last:border-0 hover:bg-brand-surface/50">
                       <td className="px-4 py-3 font-medium">{u.nombre}</td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs font-mono">{u.email}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
+                        {u.email.replace('@pos-tinoco.local', '')}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full border ${
                           u.rol === 'admin' ? 'bg-brand-accent/10 text-brand-accent border-brand-accent/20' :

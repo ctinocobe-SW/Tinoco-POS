@@ -16,7 +16,12 @@ export function LoginForm() {
     e.preventDefault()
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    // El login acepta "usuario" o "usuario@pos-tinoco.local"
+    const emailNormalizado = email.includes('@')
+      ? email
+      : `${email.trim().toLowerCase()}@pos-tinoco.local`
+
+    const { error } = await supabase.auth.signInWithPassword({ email: emailNormalizado, password })
 
     if (error) {
       toast.error('Credenciales incorrectas')
@@ -32,16 +37,16 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="bg-brand-surface border border-border rounded-lg p-8 space-y-5">
       <div className="space-y-1.5">
         <label className="text-xs text-muted-foreground uppercase tracking-wide">
-          Correo electrónico
+          Usuario
         </label>
         <input
-          type="email"
+          type="text"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          autoComplete="email"
+          autoComplete="username"
           className="w-full bg-white border border-border rounded-md px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand-accent transition-colors"
-          placeholder="usuario@empresa.com"
+          placeholder="nombre.usuario"
         />
       </div>
 

@@ -6,25 +6,31 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export type UsuarioRol = 'admin' | 'despachador' | 'checador' | 'cajero'
 
+function usernameToEmail(username: string) {
+  const slug = username.trim().toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '')
+  return `${slug}@pos-tinoco.local`
+}
+
 export async function crearUsuario(input: {
   nombre: string
-  email: string
+  username: string
   password: string
   rol: UsuarioRol
 }) {
   const { profile } = await getAuthenticatedProfile()
   if (profile.rol !== 'admin') return { error: 'Solo administradores pueden crear usuarios' }
 
-  const { nombre, email, password, rol } = input
+  const { nombre, username, password, rol } = input
   if (!nombre.trim()) return { error: 'El nombre es requerido' }
-  if (!email.trim()) return { error: 'El email es requerido' }
+  if (!username.trim()) return { error: 'El nombre de usuario es requerido' }
   if (password.length < 6) return { error: 'La contraseña debe tener al menos 6 caracteres' }
 
+  const email = usernameToEmail(username)
   const admin = createAdminClient()
 
   // Crear usuario en Supabase Auth
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
-    email: email.trim().toLowerCase(),
+    email,
     password,
     email_confirm: true,
   })
@@ -41,13 +47,12 @@ export async function crearUsuario(input: {
     .insert({
       id: userId,
       nombre: nombre.trim(),
-      email: email.trim().toLowerCase(),
+      email,
       rol,
       activo: true,
     })
 
   if (profileError) {
-    // Revertir creación del auth user
     await admin.auth.admin.deleteUser(userId)
     return { error: profileError.message }
   }

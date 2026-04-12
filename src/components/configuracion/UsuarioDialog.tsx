@@ -38,14 +38,19 @@ export function UsuarioDialog({ open, onClose, usuario }: Props) {
   const [showPass, setShowPass] = useState(false)
 
   const [nombre, setNombre] = useState('')
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rol, setRol] = useState<UsuarioRol>('despachador')
+
+  // Derivar username del email guardado (quitar el dominio @pos-tinoco.local)
+  function emailToUsername(email: string) {
+    return email.replace('@pos-tinoco.local', '')
+  }
 
   useEffect(() => {
     if (open) {
       setNombre(usuario?.nombre ?? '')
-      setEmail(usuario?.email ?? '')
+      setUsername(usuario?.email ? emailToUsername(usuario.email) : '')
       setPassword('')
       setRol(usuario?.rol ?? 'despachador')
       setShowPass(false)
@@ -58,7 +63,7 @@ export function UsuarioDialog({ open, onClose, usuario }: Props) {
     try {
       const result = isEdit
         ? await actualizarUsuario(usuario.id, { nombre, rol, password: password || undefined })
-        : await crearUsuario({ nombre, email, password, rol })
+        : await crearUsuario({ nombre, username, password, rol })
 
       if (result.error) { toast.error(result.error); return }
       toast.success(isEdit ? 'Usuario actualizado' : 'Usuario creado')
@@ -85,15 +90,25 @@ export function UsuarioDialog({ open, onClose, usuario }: Props) {
 
         {!isEdit && (
           <div className="space-y-1.5">
-            <Label htmlFor="u-email">Correo electrónico *</Label>
+            <Label htmlFor="u-username">Nombre de usuario *</Label>
             <Input
-              id="u-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="usuario@empresa.com"
+              id="u-username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="juan.perez"
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Se usará para iniciar sesión
+            </p>
+          </div>
+        )}
+        {isEdit && (
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground">Usuario</Label>
+            <p className="text-sm font-mono bg-brand-surface border border-border rounded-md px-3 py-2 text-muted-foreground">
+              {emailToUsername(usuario?.email ?? '')}
+            </p>
           </div>
         )}
 
