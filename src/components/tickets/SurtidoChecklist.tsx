@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, PackageCheck } from 'lucide-react'
+import { Check, PackageCheck, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { marcarListoParaVerificacion } from '@/lib/actions/tickets'
 import { Button } from '@/components/ui/button'
@@ -27,14 +27,19 @@ export function SurtidoChecklist({ ticketId, items, estado }: SurtidoChecklistPr
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
+  // Solo interactivo cuando el ticket está aprobado
+  const esInteractivo = estado === 'aprobado'
+
   useEffect(() => {
+    if (!esInteractivo) return // no leer localStorage si está bloqueado
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved) setChecked(new Set(JSON.parse(saved)))
     } catch {}
-  }, [storageKey])
+  }, [storageKey, esInteractivo])
 
   const toggle = (itemId: string) => {
+    if (!esInteractivo) return
     setChecked((prev) => {
       const next = new Set(prev)
       if (next.has(itemId)) {
@@ -59,12 +64,23 @@ export function SurtidoChecklist({ ticketId, items, estado }: SurtidoChecklistPr
     })
   }
 
+  // Cuando está bloqueado, todos los items aparecen como completados
+  const isItemChecked = (id: string) => !esInteractivo || checked.has(id)
+
   const total = items.length
-  const done = items.filter((i) => checked.has(i.id)).length
+  const done = esInteractivo ? items.filter((i) => checked.has(i.id)).length : total
   const todoCompleto = done === total && total > 0
 
   return (
     <div>
+      {/* Aviso de solo lectura */}
+      {!esInteractivo && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-brand-surface border border-border rounded-lg px-3 py-2 mb-4">
+          <Lock size={12} />
+          <span>Pedido enviado — solo lectura</span>
+        </div>
+      )}
+
       {/* Progreso */}
       <div className="flex items-center gap-3 mb-4">
         <span className="text-sm text-muted-foreground">
@@ -88,42 +104,42 @@ export function SurtidoChecklist({ ticketId, items, estado }: SurtidoChecklistPr
       {/* Lista */}
       <div className="space-y-2">
         {items.map((item) => {
-          const isChecked = checked.has(item.id)
+          const itemChecked = isItemChecked(item.id)
           return (
-            <button
+            <div
               key={item.id}
-              type="button"
               onClick={() => toggle(item.id)}
+              role={esInteractivo ? 'button' : undefined}
               className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                isChecked
+                itemChecked
                   ? 'border-green-200 bg-green-50/50 opacity-60'
                   : 'border-border hover:border-brand-accent hover:bg-brand-surface'
-              }`}
+              } ${esInteractivo ? 'cursor-pointer' : 'cursor-default'}`}
             >
               <div className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
-                isChecked ? 'bg-green-500 border-green-500' : 'border-border'
+                itemChecked ? 'bg-green-500 border-green-500' : 'border-border'
               }`}>
-                {isChecked && <Check size={13} className="text-white" strokeWidth={3} />}
+                {itemChecked && <Check size={13} className="text-white" strokeWidth={3} />}
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium truncate ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
+                <p className={`text-sm font-medium truncate ${itemChecked ? 'line-through text-muted-foreground' : ''}`}>
                   {item.producto_nombre}
                 </p>
                 <p className="text-xs text-muted-foreground">{item.producto_sku}</p>
               </div>
 
-              <div className={`flex-shrink-0 text-right ${isChecked ? 'text-muted-foreground' : ''}`}>
+              <div className={`flex-shrink-0 text-right ${itemChecked ? 'text-muted-foreground' : ''}`}>
                 <p className="text-sm font-semibold">{item.cantidad}</p>
                 <p className="text-xs text-muted-foreground">pzas</p>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>
 
       {/* Botón — solo cuando el ticket está aprobado Y todos los items están marcados */}
-      {estado === 'aprobado' && (
+      {esInteractivo && (
         <div className="mt-6 pt-4 border-t border-border">
           <Button
             onClick={handleMarcarListo}
