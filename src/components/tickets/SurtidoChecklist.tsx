@@ -36,7 +36,7 @@ export function SurtidoChecklist({ ticketId, items }: SurtidoChecklistProps) {
         next.add(itemId)
       }
       try {
-        localStorage.setItem(storageKey, JSON.stringify([...next]))
+        localStorage.setItem(storageKey, JSON.stringify(Array.from(next)))
       } catch {}
       return next
     })
