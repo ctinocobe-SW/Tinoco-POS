@@ -1,13 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { TopBar } from '@/components/layout/TopBar'
+import { ShellClient } from '@/components/layout/ShellClient'
+import type { UserRole } from '@/types/database.types'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -22,14 +18,8 @@ export default async function DashboardLayout({
   if (!profile || !profile.activo) redirect('/login')
 
   return (
-    <div className="flex h-screen overflow-hidden bg-brand-bg">
-      <Sidebar rol={profile.rol} nombre={profile.nombre} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar profile={profile} />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-      </div>
-    </div>
+    <ShellClient profile={{ nombre: profile.nombre, rol: profile.rol as UserRole, email: profile.email }}>
+      {children}
+    </ShellClient>
   )
 }
