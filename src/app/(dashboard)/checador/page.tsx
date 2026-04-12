@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TicketCard } from '@/components/tickets/TicketCard'
+import { TicketsRealtimeRefresh } from '@/components/tickets/TicketsRealtimeRefresh'
 
 export const metadata = { title: 'Verificación — POS TINOCO' }
 
@@ -35,6 +36,7 @@ export default async function ChecadorPage() {
 
   return (
     <div>
+      <TicketsRealtimeRefresh />
       <h1 className="text-2xl font-heading font-semibold mb-2">Cola de Verificación</h1>
       <p className="text-sm text-muted-foreground mb-6">
         {ticketsList.length} pedido{ticketsList.length !== 1 ? 's' : ''} por verificar

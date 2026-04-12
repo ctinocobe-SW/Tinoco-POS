@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { TicketCard } from '@/components/tickets/TicketCard'
+import { TicketsRealtimeRefresh } from '@/components/tickets/TicketsRealtimeRefresh'
 import { Button } from '@/components/ui/button'
 
 export const metadata = { title: 'Mis Tickets — POS TINOCO' }
@@ -38,6 +39,7 @@ export default async function TicketsPage() {
 
   return (
     <div>
+      <TicketsRealtimeRefresh despachadorId={user.id} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-heading font-semibold">Mis Tickets</h1>
         <Link href="/despachador/tickets/nuevo">
