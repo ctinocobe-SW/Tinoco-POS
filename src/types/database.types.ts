@@ -27,6 +27,8 @@ export type MovimientoTipo = 'entrada' | 'salida' | 'traspaso' | 'merma' | 'ajus
 export type DiscrepanciaTipo = 'faltante' | 'sobrante' | 'incorrecto' | 'danado'
 export type AlmacenTipo = 'bodega' | 'sucursal'
 export type ListaSurtidoEstado = 'borrador' | 'confirmada' | 'en_transito' | 'entregada' | 'cancelada'
+export type CreditoEstado = 'vigente' | 'vencido' | 'liquidado' | 'cancelado'
+export type MetodoPagoCredito = 'efectivo' | 'transferencia' | 'cheque' | 'otro'
 
 export interface Database {
   public: {
@@ -45,6 +47,42 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+      }
+      creditos: {
+        Row: {
+          id: string
+          cliente_id: string
+          ticket_id: string | null
+          monto_original: number
+          saldo: number
+          fecha_otorgamiento: string
+          fecha_vencimiento: string
+          plazo_dias: number
+          tasa_mora_pct: number
+          estado: CreditoEstado
+          aval_nombre: string | null
+          lugar_expedicion: string
+          notas: string | null
+          otorgado_por: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['creditos']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['creditos']['Insert']>
+      }
+      abonos_credito: {
+        Row: {
+          id: string
+          credito_id: string
+          monto: number
+          fecha: string
+          metodo_pago: MetodoPagoCredito
+          referencia: string | null
+          notas: string | null
+          registrado_por: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['abonos_credito']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['abonos_credito']['Insert']>
       }
       tickets: {
         Row: {
@@ -70,6 +108,8 @@ export interface Database {
           cfdi_uuid: string | null
           cfdi_folio: string | null
           whatsapp_enviado: boolean
+          es_credito: boolean
+          credito_id: string | null
           created_at: string
           updated_at: string
         }
@@ -244,6 +284,8 @@ export interface Database {
       discrepancia_tipo: DiscrepanciaTipo
       almacen_tipo: AlmacenTipo
       lista_surtido_estado: ListaSurtidoEstado
+      credito_estado: CreditoEstado
+      metodo_pago_credito: MetodoPagoCredito
     }
   }
 }

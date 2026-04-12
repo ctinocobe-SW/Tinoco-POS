@@ -9,9 +9,10 @@ import type { UserRole } from '@/types/database.types'
 interface Props {
   children: React.ReactNode
   profile: { nombre: string; rol: UserRole; email: string }
+  badges?: Record<string, number>
 }
 
-export function ShellClient({ children, profile }: Props) {
+export function ShellClient({ children, profile, badges = {} }: Props) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(true)   // desktop: icon-only por defecto
   const [mobileOpen, setMobileOpen] = useState(false) // mobile: cerrado por defecto
@@ -37,6 +38,7 @@ export function ShellClient({ children, profile }: Props) {
         mobileOpen={mobileOpen}
         onToggleCollapse={() => setCollapsed((v) => !v)}
         onMobileClose={() => setMobileOpen(false)}
+        badges={badges}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

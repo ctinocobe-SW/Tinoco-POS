@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@media print {
+  /* Ocultar toda la UI excepto el bloque de pagaré */
+  body > * { display: none !important; }
+  #pagare-block,
+  #pagare-block * { display: revert !important; }
+  #pagare-block { position: fixed; inset: 0; padding: 2rem; }
+  .print\:hidden { display: none !important; }
+}
+
 @layer base {
   :root {
     --foreground: 0 0% 4%;

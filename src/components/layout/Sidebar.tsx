@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Receipt, Package, Users, Warehouse,
-  Truck, BarChart3, CheckSquare, ShoppingCart, Settings, Menu, X,
+  Truck, BarChart3, CheckSquare, ShoppingCart, Settings, Menu, X, CreditCard,
 } from 'lucide-react'
 import type { UserRole } from '@/types/database.types'
 import { cn } from '@/lib/utils/cn'
@@ -16,14 +16,16 @@ interface SidebarProps {
   mobileOpen: boolean
   onToggleCollapse: () => void
   onMobileClose: () => void
+  badges?: Record<string, number>
 }
 
-const navByRole: Record<UserRole, { label: string; href: string; icon: React.ElementType }[]> = {
+const navByRole: Record<UserRole, { label: string; href: string; icon: React.ElementType; badgeKey?: string }[]> = {
   admin: [
     { label: 'Dashboard',      href: '/admin',                icon: LayoutDashboard },
     { label: 'Tickets',        href: '/admin/tickets',        icon: Receipt },
     { label: 'Productos',      href: '/admin/productos',      icon: Package },
     { label: 'Clientes',       href: '/admin/clientes',       icon: Users },
+    { label: 'Créditos',       href: '/admin/creditos',       icon: CreditCard,   badgeKey: 'creditosVencidos' },
     { label: 'Inventario',     href: '/admin/inventario',     icon: Warehouse },
     { label: 'Surtido',        href: '/admin/surtido',        icon: Truck },
     { label: 'Analítica',      href: '/admin/analitica',      icon: BarChart3 },
@@ -49,7 +51,7 @@ const navByRole: Record<UserRole, { label: string; href: string; icon: React.Ele
   ],
 }
 
-export function Sidebar({ rol, nombre, collapsed, mobileOpen, onToggleCollapse, onMobileClose }: SidebarProps) {
+export function Sidebar({ rol, nombre, collapsed, mobileOpen, onToggleCollapse, onMobileClose, badges = {} }: SidebarProps) {
   const pathname = usePathname()
   const navItems = navByRole[rol] ?? []
 
@@ -58,6 +60,7 @@ export function Sidebar({ rol, nombre, collapsed, mobileOpen, onToggleCollapse, 
       {navItems.map((item) => {
         const Icon = item.icon
         const active = pathname === item.href || pathname.startsWith(item.href + '/')
+        const badgeCount = item.badgeKey ? (badges[item.badgeKey] ?? 0) : 0
         return (
           <Link
             key={item.href}
@@ -72,8 +75,22 @@ export function Sidebar({ rol, nombre, collapsed, mobileOpen, onToggleCollapse, 
                 : 'text-muted-foreground hover:text-foreground hover:bg-brand-muted/40'
             )}
           >
-            <Icon size={showLabels ? 16 : 18} className="shrink-0" />
-            {showLabels && <span className="truncate">{item.label}</span>}
+            <div className="relative shrink-0">
+              <Icon size={showLabels ? 16 : 18} />
+              {badgeCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </span>
+              )}
+            </div>
+            {showLabels && (
+              <span className="truncate flex-1">{item.label}</span>
+            )}
+            {showLabels && badgeCount > 0 && (
+              <span className="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none font-semibold">
+                {badgeCount > 99 ? '99+' : badgeCount}
+              </span>
+            )}
           </Link>
         )
       })}

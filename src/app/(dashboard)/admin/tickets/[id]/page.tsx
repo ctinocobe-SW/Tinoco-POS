@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CreditCard } from 'lucide-react'
 import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
 import { TicketItemsTable } from '@/components/tickets/TicketItemsTable'
 import { ApprovalActions } from '@/components/tickets/ApprovalActions'
+import { PagareTicketBlock } from '@/components/creditos/PagareTicketBlock'
 import { formatMXN, formatDateTime } from '@/lib/utils/format'
 
 export const metadata = { title: 'Detalle Ticket — POS TINOCO' }
@@ -24,7 +25,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   const { data: ticket } = await supabase
     .from('tickets')
-    .select('id, folio, estado, subtotal, iva, ieps, descuento, total, notas, motivo_rechazo, created_at, clientes(nombre, rfc), profiles!tickets_despachador_id_fkey(nombre)')
+    .select('id, folio, estado, subtotal, iva, ieps, descuento, total, notas, motivo_rechazo, created_at, es_credito, credito_id, clientes(nombre, rfc, telefono), profiles!tickets_despachador_id_fkey(nombre)')
     .eq('id', params.id)
     .single()
 
@@ -134,6 +135,41 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       {t.estado === 'pendiente_aprobacion' && (
         <div className="border-t border-border pt-6">
           <ApprovalActions ticketId={t.id} />
+        </div>
+      )}
+
+      {/* Pagaré — visible cuando el ticket tiene crédito vinculado */}
+      {t.es_credito && t.credito_id && (
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <CreditCard size={15} className="text-brand-accent" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Pagaré vinculado
+            </h2>
+            <Link href={`/admin/creditos/${t.credito_id}`}
+              className="ml-auto text-xs text-brand-accent hover:underline">
+              Ver crédito →
+            </Link>
+          </div>
+          <PagareTicketBlock
+            ticket={{
+              folio: t.folio,
+              total: Number(t.total),
+              created_at: t.created_at,
+            }}
+            cliente={{
+              nombre: t.clientes?.nombre ?? '—',
+              rfc: t.clientes?.rfc ?? null,
+            }}
+            creditoId={t.credito_id}
+            items={itemsList.map((i) => ({
+              cantidad: Number(i.cantidad),
+              precio_unitario: Number(i.precio_unitario),
+              subtotal: Number(i.subtotal),
+              producto_sku: i.producto_sku ?? '—',
+              producto_nombre: i.producto_nombre ?? '—',
+            }))}
+          />
         </div>
       )}
     </div>
