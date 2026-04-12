@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -42,6 +43,7 @@ const REGIMENES = [
 export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+  const [showFiscal, setShowFiscal] = useState(false)
   const isEdit = !!clienteId
 
   const {
@@ -147,50 +149,61 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
       </div>
 
       {/* Datos fiscales */}
-      <div className="border border-border rounded-lg p-5 space-y-4">
-        <h2 className="text-sm font-medium">Datos fiscales</h2>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowFiscal((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 hover:bg-brand-surface/50 transition-colors text-left"
+        >
+          <span className="text-sm font-medium">Datos fiscales</span>
+          {showFiscal ? <ChevronDown size={15} className="text-muted-foreground" /> : <ChevronRight size={15} className="text-muted-foreground" />}
+        </button>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="rfc">RFC</Label>
-            <Input
-              id="rfc"
-              {...register('rfc')}
-              placeholder="XAXX010101000"
-              className="font-mono"
-            />
-            {errors.rfc && <p className="text-xs text-red-600">{errors.rfc.message}</p>}
+        {showFiscal && (
+          <div className="px-5 pb-5 space-y-4 border-t border-border">
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="rfc">RFC</Label>
+                <Input
+                  id="rfc"
+                  {...register('rfc')}
+                  placeholder="XAXX010101000"
+                  className="font-mono"
+                />
+                {errors.rfc && <p className="text-xs text-red-600">{errors.rfc.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="codigo_postal">Código postal</Label>
+                <Input
+                  id="codigo_postal"
+                  {...register('codigo_postal')}
+                  placeholder="36000"
+                  maxLength={5}
+                />
+                {errors.codigo_postal && <p className="text-xs text-red-600">{errors.codigo_postal.message}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="regimen_fiscal">Régimen fiscal</Label>
+              <Select id="regimen_fiscal" {...register('regimen_fiscal')}>
+                {REGIMENES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="uso_cfdi">Uso de CFDI</Label>
+              <Select id="uso_cfdi" {...register('uso_cfdi')}>
+                {USOS_CFDI.map((u) => (
+                  <option key={u.value} value={u.value}>{u.label}</option>
+                ))}
+              </Select>
+            </div>
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="codigo_postal">Código postal</Label>
-            <Input
-              id="codigo_postal"
-              {...register('codigo_postal')}
-              placeholder="36000"
-              maxLength={5}
-            />
-            {errors.codigo_postal && <p className="text-xs text-red-600">{errors.codigo_postal.message}</p>}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="regimen_fiscal">Régimen fiscal</Label>
-          <Select id="regimen_fiscal" {...register('regimen_fiscal')}>
-            {REGIMENES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="uso_cfdi">Uso de CFDI</Label>
-          <Select id="uso_cfdi" {...register('uso_cfdi')}>
-            {USOS_CFDI.map((u) => (
-              <option key={u.value} value={u.value}>{u.label}</option>
-            ))}
-          </Select>
-        </div>
+        )}
       </div>
 
       {/* Crédito */}
