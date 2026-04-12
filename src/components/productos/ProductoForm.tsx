@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 
 import { productoSchema, CATEGORIAS_PRODUCTO } from '@/lib/validations/schemas'
 import type { ProductoInput, CategoriaProducto } from '@/lib/validations/schemas'
@@ -23,9 +24,15 @@ interface ProductoFormProps {
   almacenes?: Almacen[]
 }
 
+function formatTasa(t: number) {
+  const pct = t * 100
+  return pct % 1 === 0 ? `${pct}%` : `${pct.toFixed(1)}%`
+}
+
 export function ProductoForm({ productoId, defaultValues, almacenes = [] }: ProductoFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+  const [showImpuestos, setShowImpuestos] = useState(false)
   const isEdit = !!productoId
 
   const form = useForm<ProductoInput>({
@@ -44,8 +51,10 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
       vende_kg: false,
       vende_caja: false,
       vende_bulto: false,
+      piezas_por_caja: undefined,
+      piezas_por_bulto: undefined,
       requiere_caducidad: false,
-      codigo_barras: '',
+      fecha_caducidad: undefined,
       stock_inicial: 0,
       almacen_id_inicial: almacenes[0]?.id ?? '',
       ...defaultValues,
@@ -62,6 +71,11 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
 
   const categoriaSeleccionada = watch('categoria')
   const stockInicial = watch('stock_inicial') ?? 0
+  const vendeCaja = watch('vende_caja')
+  const vendeBulto = watch('vende_bulto')
+  const requiereCaducidad = watch('requiere_caducidad')
+  const tasaIva = watch('tasa_iva') ?? 0.16
+  const tasaIeps = watch('tasa_ieps') ?? 0
 
   const onSubmit = async (data: ProductoInput) => {
     setSubmitting(true)
@@ -131,21 +145,11 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
           </div>
           {errors.categoria && <p className="text-xs text-red-600">{errors.categoria.message}</p>}
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="codigo_barras">Código de barras</Label>
-          <Input
-            id="codigo_barras"
-            {...register('codigo_barras')}
-            placeholder="7501000000000"
-            className="font-mono"
-          />
-        </div>
       </div>
 
       {/* Precios e impuestos */}
       <div className="border border-border rounded-lg p-5 space-y-4">
-        <h2 className="text-sm font-medium">Precios e impuestos</h2>
+        <h2 className="text-sm font-medium">Precios</h2>
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
@@ -187,39 +191,62 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="tasa_iva">IVA</Label>
-            <Select id="tasa_iva" {...register('tasa_iva', { valueAsNumber: true })}>
-              <option value={0}>0%</option>
-              <option value={0.08}>8%</option>
-              <option value={0.16}>16%</option>
-            </Select>
-          </div>
+        {/* Toggle impuestos */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowImpuestos((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showImpuestos
+              ? <ChevronDown size={13} />
+              : <ChevronRight size={13} />
+            }
+            Impuestos
+            {!showImpuestos && (
+              <span className="ml-1 text-foreground font-medium">
+                IVA {formatTasa(tasaIva)}
+                {tasaIeps > 0 && ` · IEPS ${formatTasa(tasaIeps)}`}
+              </span>
+            )}
+          </button>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="tasa_ieps">IEPS</Label>
-            <Select id="tasa_ieps" {...register('tasa_ieps', { valueAsNumber: true })}>
-              <option value={0}>0%</option>
-              <option value={0.03}>3%</option>
-              <option value={0.06}>6%</option>
-              <option value={0.07}>7%</option>
-              <option value={0.08}>8%</option>
-              <option value={0.09}>9%</option>
-              <option value={0.265}>26.5%</option>
-              <option value={0.30}>30%</option>
-              <option value={0.53}>53%</option>
-            </Select>
-          </div>
+          {showImpuestos && (
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="tasa_iva">IVA</Label>
+                <Select id="tasa_iva" {...register('tasa_iva', { valueAsNumber: true })}>
+                  <option value={0}>0%</option>
+                  <option value={0.08}>8%</option>
+                  <option value={0.16}>16%</option>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="tasa_ieps">IEPS</Label>
+                <Select id="tasa_ieps" {...register('tasa_ieps', { valueAsNumber: true })}>
+                  <option value={0}>0%</option>
+                  <option value={0.03}>3%</option>
+                  <option value={0.06}>6%</option>
+                  <option value={0.07}>7%</option>
+                  <option value={0.08}>8%</option>
+                  <option value={0.09}>9%</option>
+                  <option value={0.265}>26.5%</option>
+                  <option value={0.30}>30%</option>
+                  <option value={0.53}>53%</option>
+                </Select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Unidades de venta */}
       <div className="border border-border rounded-lg p-5 space-y-3">
         <h2 className="text-sm font-medium">Unidades de venta</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-6">
           {/* Menudeo */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Menudeo — usa precio menudeo
             </p>
@@ -242,26 +269,58 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
           </div>
 
           {/* Mayoreo */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Mayoreo — usa precio mayoreo
             </p>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                {...register('vende_caja')}
-                className="w-4 h-4 accent-brand-accent"
-              />
-              <span className="text-sm">Cajas</span>
-            </label>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                {...register('vende_bulto')}
-                className="w-4 h-4 accent-brand-accent"
-              />
-              <span className="text-sm">Bulto</span>
-            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('vende_caja')}
+                  className="w-4 h-4 accent-brand-accent"
+                />
+                <span className="text-sm">Cajas</span>
+              </label>
+              {vendeCaja && (
+                <div className="ml-6 space-y-1">
+                  <Label className="text-xs text-muted-foreground">Piezas / kg por caja</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0.001"
+                    {...register('piezas_por_caja', { valueAsNumber: true })}
+                    placeholder="0"
+                    className="h-8 text-sm"
+                  />
+                  {errors.piezas_por_caja && <p className="text-xs text-red-600">{errors.piezas_por_caja.message}</p>}
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('vende_bulto')}
+                  className="w-4 h-4 accent-brand-accent"
+                />
+                <span className="text-sm">Bulto</span>
+              </label>
+              {vendeBulto && (
+                <div className="ml-6 space-y-1">
+                  <Label className="text-xs text-muted-foreground">Piezas / kg por bulto</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0.001"
+                    {...register('piezas_por_bulto', { valueAsNumber: true })}
+                    placeholder="0"
+                    className="h-8 text-sm"
+                  />
+                  {errors.piezas_por_bulto && <p className="text-xs text-red-600">{errors.piezas_por_bulto.message}</p>}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -270,30 +329,42 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [] }: Prod
       <div className="border border-border rounded-lg p-5 space-y-4">
         <h2 className="text-sm font-medium">Logística</h2>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="peso_kg">Peso (kg)</Label>
-            <Input
-              id="peso_kg"
-              type="number"
-              step="0.001"
-              min="0"
-              {...register('peso_kg', { valueAsNumber: true })}
-              placeholder="0.000"
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="peso_kg">Peso por unidad (kg)</Label>
+          <Input
+            id="peso_kg"
+            type="number"
+            step="0.001"
+            min="0"
+            {...register('peso_kg', { valueAsNumber: true })}
+            placeholder="0.000"
+            className="max-w-xs"
+          />
+        </div>
 
-          <div className="flex items-center gap-3 pt-6">
+        <div className="space-y-3">
+          <label className="flex items-center gap-2.5 cursor-pointer">
             <input
               id="requiere_caducidad"
               type="checkbox"
               {...register('requiere_caducidad')}
               className="w-4 h-4 accent-brand-accent"
             />
-            <Label htmlFor="requiere_caducidad" className="normal-case text-sm text-foreground">
+            <Label htmlFor="requiere_caducidad" className="normal-case text-sm text-foreground cursor-pointer">
               Requiere fecha de caducidad
             </Label>
-          </div>
+          </label>
+          {requiereCaducidad && (
+            <div className="ml-6 space-y-1">
+              <Label htmlFor="fecha_caducidad" className="text-xs text-muted-foreground">Fecha de caducidad</Label>
+              <Input
+                id="fecha_caducidad"
+                type="date"
+                {...register('fecha_caducidad')}
+                className="max-w-xs"
+              />
+            </div>
+          )}
         </div>
       </div>
 

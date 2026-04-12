@@ -34,7 +34,6 @@ interface ItemMeta {
   precio_base: number
   tasa_iva: number
   tasa_ieps: number
-  unidad_medida: string
 }
 
 export function AdminCreateTicketDialog({ open, onClose, despachadores, almacenes }: AdminCreateTicketDialogProps) {
@@ -127,7 +126,6 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
       precio_base: Number(p.precio_base),
       tasa_iva: Number(p.tasa_iva),
       tasa_ieps: Number(p.tasa_ieps),
-      unidad_medida: p.unidad_medida,
     }))
     append({
       producto_id: p.id,
@@ -279,7 +277,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                         {meta ? (
                           <div>
                             <p className="font-medium text-xs">{meta.nombre}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{meta.sku} · {meta.unidad_medida}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{meta.sku}</p>
                           </div>
                         ) : <span className="text-muted-foreground text-xs">—</span>}
                       </td>

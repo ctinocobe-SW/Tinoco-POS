@@ -28,7 +28,7 @@ export default async function ProductoDetailPage({ params }: PageProps) {
 
   const { data: producto } = await supabase
     .from('productos')
-    .select('id, sku, nombre, descripcion, categoria, peso_kg, precio_base, precio_mayoreo, costo, tasa_iva, tasa_ieps, vende_pza, vende_kg, vende_caja, vende_bulto, requiere_caducidad, codigo_barras, activo, created_at, updated_at')
+    .select('id, sku, nombre, descripcion, categoria, peso_kg, precio_base, precio_mayoreo, costo, tasa_iva, tasa_ieps, vende_pza, vende_kg, vende_caja, vende_bulto, piezas_por_caja, piezas_por_bulto, requiere_caducidad, fecha_caducidad, activo, created_at, updated_at')
     .eq('id', params.id)
     .single()
 
@@ -93,8 +93,10 @@ export default async function ProductoDetailPage({ params }: PageProps) {
           vende_kg: p.vende_kg ?? false,
           vende_caja: p.vende_caja ?? false,
           vende_bulto: p.vende_bulto ?? false,
+          piezas_por_caja: p.piezas_por_caja ? Number(p.piezas_por_caja) : undefined,
+          piezas_por_bulto: p.piezas_por_bulto ? Number(p.piezas_por_bulto) : undefined,
           requiere_caducidad: p.requiere_caducidad,
-          codigo_barras: p.codigo_barras ?? '',
+          fecha_caducidad: p.fecha_caducidad ?? undefined,
         }}
       />
 
