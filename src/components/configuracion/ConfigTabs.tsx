@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { AlmacenDialog } from './AlmacenDialog'
 import { ProveedorDialog } from './ProveedorDialog'
 import { UsuarioDialog } from './UsuarioDialog'
+import { ZonaDialog } from './ZonaDialog'
 import type { UsuarioRow } from './UsuarioDialog'
-import { toggleAlmacen, toggleProveedor } from '@/lib/actions/configuracion'
+import { toggleAlmacen, toggleProveedor, toggleZona } from '@/lib/actions/configuracion'
 import { toggleUsuarioActivo } from '@/lib/actions/usuarios'
 import type { AlmacenTipo } from '@/types/database.types'
 
@@ -32,6 +33,21 @@ interface Proveedor {
   activo: boolean
 }
 
+interface Zona {
+  id: string
+  nombre: string
+  almacen_id: string
+  almacen_nombre: string
+  despachador_id: string | null
+  despachador_nombre: string | null
+  activo: boolean
+}
+
+interface Despachador {
+  id: string
+  nombre: string
+}
+
 interface ProductoOption {
   id: string
   sku: string
@@ -43,9 +59,11 @@ interface ConfigTabsProps {
   proveedores: Proveedor[]
   usuarios: UsuarioRow[]
   productos: ProductoOption[]
+  zonas: Zona[]
+  despachadores: Despachador[]
 }
 
-type Tab = 'almacenes' | 'proveedores' | 'usuarios'
+type Tab = 'almacenes' | 'proveedores' | 'usuarios' | 'zonas'
 
 const ROL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -68,7 +86,14 @@ function ToggleButton({ id, activo, onToggle }: { id: string; activo: boolean; o
   )
 }
 
-export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialProveedores, usuarios: initialUsuarios, productos }: ConfigTabsProps) {
+export function ConfigTabs({
+  almacenes: initialAlmacenes,
+  proveedores: initialProveedores,
+  usuarios: initialUsuarios,
+  productos,
+  zonas: initialZonas,
+  despachadores,
+}: ConfigTabsProps) {
   const [tab, setTab] = useState<Tab>('almacenes')
 
   // Almacenes state
@@ -85,6 +110,11 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
   const [usuarios, setUsuarios] = useState(initialUsuarios)
   const [usuarioDialog, setUsuarioDialog] = useState(false)
   const [editUsuario, setEditUsuario] = useState<UsuarioRow | null>(null)
+
+  // Zonas state
+  const [zonas, setZonas] = useState(initialZonas)
+  const [zonaDialog, setZonaDialog] = useState(false)
+  const [editZona, setEditZona] = useState<Zona | null>(null)
 
   const handleToggleAlmacen = async (id: string) => {
     const result = await toggleAlmacen(id)
@@ -107,11 +137,22 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
     toast.success(activo ? 'Usuario activado' : 'Usuario desactivado')
   }
 
+  const handleToggleZona = async (id: string) => {
+    const result = await toggleZona(id)
+    if (result.error) { toast.error(result.error); return }
+    setZonas((prev) => prev.map((z) => z.id === id ? { ...z, activo: result.data!.activo } : z))
+    toast.success(result.data!.activo ? 'Zona activada' : 'Zona desactivada')
+  }
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'almacenes', label: `Almacenes (${almacenes.length})` },
     { key: 'proveedores', label: `Proveedores (${proveedores.length})` },
     { key: 'usuarios', label: `Usuarios (${usuarios.length})` },
+    { key: 'zonas', label: `Zonas (${zonas.length})` },
   ]
+
+  // Almacen options for ZonaDialog (only sucursales)
+  const almacenesSucursal = almacenes.filter((a) => a.tipo === 'sucursal' && a.activo)
 
   return (
     <>
@@ -331,6 +372,68 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
         </div>
       )}
 
+      {/* Zonas */}
+      {tab === 'zonas' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">
+              Las zonas definen ubicaciones físicas dentro de una sucursal y se asignan a despachadores.
+            </p>
+            <Button onClick={() => { setEditZona(null); setZonaDialog(true) }}>
+              <Plus size={15} className="mr-1.5" />
+              Nueva zona
+            </Button>
+          </div>
+
+          {zonas.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm border border-border rounded-lg">
+              No hay zonas registradas
+            </div>
+          ) : (
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
+                    <th className="px-4 py-2.5 text-left">Zona</th>
+                    <th className="px-4 py-2.5 text-left">Sucursal</th>
+                    <th className="px-4 py-2.5 text-left">Despachador</th>
+                    <th className="px-4 py-2.5 text-center w-24">Estado</th>
+                    <th className="px-4 py-2.5 w-28"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zonas.map((z) => (
+                    <tr key={z.id} className="border-b border-border last:border-0 hover:bg-brand-surface/50">
+                      <td className="px-4 py-3 font-medium">{z.nombre}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{z.almacen_nombre}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{z.despachador_nombre ?? '—'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={z.activo ? 'success' : 'default'}>
+                          {z.activo ? 'Activa' : 'Inactiva'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 justify-end">
+                          <button
+                            onClick={() => { setEditZona(z); setZonaDialog(true) }}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <ToggleButton id={z.id} activo={z.activo} onToggle={handleToggleZona} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <AlmacenDialog
         open={almacenDialog}
         onClose={() => { setAlmacenDialog(false); setEditAlmacen(null) }}
@@ -346,6 +449,13 @@ export function ConfigTabs({ almacenes: initialAlmacenes, proveedores: initialPr
         open={usuarioDialog}
         onClose={() => { setUsuarioDialog(false); setEditUsuario(null); }}
         usuario={editUsuario}
+      />
+      <ZonaDialog
+        open={zonaDialog}
+        onClose={() => { setZonaDialog(false); setEditZona(null) }}
+        zona={editZona ? { id: editZona.id, nombre: editZona.nombre, almacen_id: editZona.almacen_id, despachador_id: editZona.despachador_id } : null}
+        almacenes={almacenesSucursal}
+        despachadores={despachadores}
       />
     </>
   )

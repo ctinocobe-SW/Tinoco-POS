@@ -32,7 +32,7 @@ export default async function VerificarTicketPage({ params }: { params: { id: st
 
   const t = ticket as any
 
-  if (!['aprobado', 'en_verificacion'].includes(t.estado)) {
+  if (t.estado !== 'en_verificacion') {
     redirect('/checador')
   }
 

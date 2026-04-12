@@ -18,7 +18,13 @@ export default async function ConfiguracionPage() {
 
   if ((profile as any)?.rol !== 'admin') redirect('/')
 
-  const [{ data: almacenes }, { data: proveedores }, { data: usuarios }, { data: productos }] = await Promise.all([
+  const [
+    { data: almacenes },
+    { data: proveedores },
+    { data: usuarios },
+    { data: productos },
+    { data: zonas },
+  ] = await Promise.all([
     supabase
       .from('almacenes')
       .select('id, nombre, ubicacion, tipo, activo')
@@ -35,6 +41,10 @@ export default async function ConfiguracionPage() {
       .from('productos')
       .select('id, sku, nombre')
       .eq('activo', true)
+      .order('nombre', { ascending: true }),
+    supabase
+      .from('zonas')
+      .select('id, nombre, almacen_id, despachador_id, activo, almacenes(nombre), profiles(nombre)')
       .order('nombre', { ascending: true }),
   ])
 
@@ -71,16 +81,37 @@ export default async function ConfiguracionPage() {
     nombre: p.nombre as string,
   }))
 
+  const zonasList = (zonas ?? []).map((z: any) => ({
+    id: z.id as string,
+    nombre: z.nombre as string,
+    almacen_id: z.almacen_id as string,
+    almacen_nombre: (z.almacenes?.nombre ?? '—') as string,
+    despachador_id: z.despachador_id as string | null,
+    despachador_nombre: (z.profiles?.nombre ?? null) as string | null,
+    activo: z.activo as boolean,
+  }))
+
+  const despachadores = (usuarios ?? [])
+    .filter((u: any) => u.rol === 'despachador' && u.activo)
+    .map((u: any) => ({ id: u.id as string, nombre: u.nombre as string }))
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-heading font-semibold">Configuración</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Gestión de almacenes, proveedores y usuarios
+          Gestión de almacenes, proveedores, usuarios y zonas
         </p>
       </div>
 
-      <ConfigTabs almacenes={almacenesList} proveedores={proveedoresList} usuarios={usuariosList} productos={productosList} />
+      <ConfigTabs
+        almacenes={almacenesList}
+        proveedores={proveedoresList}
+        usuarios={usuariosList}
+        productos={productosList}
+        zonas={zonasList}
+        despachadores={despachadores}
+      />
     </div>
   )
 }

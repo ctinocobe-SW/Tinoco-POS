@@ -47,6 +47,7 @@ export async function crearRecepcion(input: CrearRecepcionInput) {
     cantidad_recibida: item.cantidad_recibida,
     fecha_caducidad: item.fecha_caducidad ?? null,
     discrepancia: item.discrepancia ?? null,
+    zona_id: item.zona_id ?? null,
   }))
 
   const { error: itemsError } = await supabase

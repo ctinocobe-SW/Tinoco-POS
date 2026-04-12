@@ -17,19 +17,37 @@ export default async function NuevaRecepcionPage() {
     .eq('id', user.id)
     .single()
 
-  const rol = (profile as any)?.rol
+  const rol = (profile as any)?.rol as string
   if (!rol || !['admin', 'despachador'].includes(rol)) redirect('/')
 
-  // Cargar almacenes en el servidor y pasarlos al form
-  const { data: almacenes } = await supabase
-    .from('almacenes')
-    .select('id, nombre, tipo')
-    .eq('activo', true)
-    .order('nombre', { ascending: true })
+  const [{ data: almacenes }, { data: zonas }] = await Promise.all([
+    supabase
+      .from('almacenes')
+      .select('id, nombre, tipo')
+      .eq('activo', true)
+      .order('nombre', { ascending: true }),
+    supabase
+      .from('zonas')
+      .select('id, nombre, almacen_id, profiles(nombre)')
+      .eq('activo', true)
+      .order('nombre', { ascending: true }),
+  ])
 
   const almacenesList = (almacenes ?? []) as { id: string; nombre: string; tipo: string }[]
 
-  if (almacenesList.length === 0) {
+  // Despachadores only see sucursales
+  const almacenesDisponibles = rol === 'admin'
+    ? almacenesList
+    : almacenesList.filter((a) => a.tipo === 'sucursal')
+
+  const zonasList = (zonas ?? []).map((z: any) => ({
+    id: z.id as string,
+    nombre: z.nombre as string,
+    almacen_id: z.almacen_id as string,
+    despachador_nombre: (z.profiles?.nombre ?? null) as string | null,
+  }))
+
+  if (almacenesDisponibles.length === 0) {
     return (
       <div>
         <Link
@@ -40,7 +58,7 @@ export default async function NuevaRecepcionPage() {
           Volver a recepciones
         </Link>
         <div className="text-center py-12 text-muted-foreground">
-          <p>No hay almacenes activos configurados.</p>
+          <p>No hay almacenes disponibles para tu rol.</p>
           <p className="text-xs mt-1">Contacta al administrador.</p>
         </div>
       </div>
@@ -59,7 +77,7 @@ export default async function NuevaRecepcionPage() {
 
       <h1 className="text-2xl font-heading font-semibold mb-6">Nueva recepción</h1>
 
-      <RecepcionForm almacenes={almacenesList} />
+      <RecepcionForm almacenes={almacenesDisponibles} zonas={zonasList} rol={rol} />
     </div>
   )
 }

@@ -131,6 +131,51 @@ export async function actualizarProveedor(proveedorId: string, input: ProveedorI
   return { data: { ok: true } }
 }
 
+// ── Zonas ──────────────────────────────────────────────────
+
+export async function crearZona(input: { nombre: string; almacen_id: string; despachador_id?: string }) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Sin permisos' }
+
+  const { error, data } = await supabase
+    .from('zonas')
+    .insert({ id: crypto.randomUUID(), nombre: input.nombre, almacen_id: input.almacen_id, despachador_id: input.despachador_id ?? null, activo: true })
+    .select('id')
+    .single()
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/configuracion')
+  return { data: { id: (data as any).id } }
+}
+
+export async function actualizarZona(zonaId: string, input: { nombre: string; almacen_id: string; despachador_id?: string }) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Sin permisos' }
+
+  const { error } = await supabase
+    .from('zonas')
+    .update({ nombre: input.nombre, almacen_id: input.almacen_id, despachador_id: input.despachador_id ?? null })
+    .eq('id', zonaId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/configuracion')
+  return { data: { ok: true } }
+}
+
+export async function toggleZona(zonaId: string) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Sin permisos' }
+
+  const { data: zona } = await supabase.from('zonas').select('activo').eq('id', zonaId).single()
+  if (!zona) return { error: 'Zona no encontrada' }
+
+  const { error } = await supabase.from('zonas').update({ activo: !(zona as any).activo }).eq('id', zonaId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/configuracion')
+  return { data: { activo: !(zona as any).activo } }
+}
+
 export async function setProductosProveedor(proveedorId: string, productoIds: string[]) {
   const { profile, supabase } = await getAuthenticatedProfile()
   if (profile.rol !== 'admin') return { error: 'Sin permisos' }

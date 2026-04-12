@@ -3,7 +3,6 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { SurtidoChecklist } from '@/components/tickets/SurtidoChecklist'
-import { MarcarListoButton } from '@/components/tickets/MarcarListoButton'
 import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
 import { formatMXN, formatDate } from '@/lib/utils/format'
 import type { TicketEstado } from '@/types/database.types'
@@ -88,14 +87,7 @@ export default async function TicketSurtidoPage({ params }: { params: { id: stri
       {itemsList.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-8">Este ticket no tiene productos.</p>
       ) : (
-        <SurtidoChecklist ticketId={params.id} items={itemsList} />
-      )}
-
-      {/* Botón para enviar a verificación — solo cuando el ticket está aprobado */}
-      {t.estado === 'aprobado' && itemsList.length > 0 && (
-        <div className="mt-6 pt-4 border-t border-border">
-          <MarcarListoButton ticketId={params.id} />
-        </div>
+        <SurtidoChecklist ticketId={params.id} items={itemsList} estado={t.estado as TicketEstado} />
       )}
     </div>
   )

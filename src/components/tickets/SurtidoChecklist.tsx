@@ -1,7 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Check } from 'lucide-react'
+import { useState, useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { Check, PackageCheck } from 'lucide-react'
+import { toast } from 'sonner'
+import { marcarListoParaVerificacion } from '@/lib/actions/tickets'
+import { Button } from '@/components/ui/button'
+import type { TicketEstado } from '@/types/database.types'
 
 interface Item {
   id: string
@@ -13,13 +18,15 @@ interface Item {
 interface SurtidoChecklistProps {
   ticketId: string
   items: Item[]
+  estado: TicketEstado
 }
 
-export function SurtidoChecklist({ ticketId, items }: SurtidoChecklistProps) {
+export function SurtidoChecklist({ ticketId, items, estado }: SurtidoChecklistProps) {
   const storageKey = `surtido-${ticketId}`
   const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
-  // Cargar estado guardado
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
@@ -42,36 +49,31 @@ export function SurtidoChecklist({ ticketId, items }: SurtidoChecklistProps) {
     })
   }
 
-  const resetAll = () => {
-    setChecked(new Set())
-    try { localStorage.removeItem(storageKey) } catch {}
+  const handleMarcarListo = () => {
+    startTransition(async () => {
+      const result = await marcarListoParaVerificacion(ticketId)
+      if (result.error) { toast.error(result.error); return }
+      try { localStorage.removeItem(storageKey) } catch {}
+      toast.success('Pedido enviado a verificación')
+      router.push('/despachador/tickets')
+    })
   }
 
   const total = items.length
   const done = items.filter((i) => checked.has(i.id)).length
+  const todoCompleto = done === total && total > 0
 
   return (
     <div>
       {/* Progreso */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{done}</span> / {total} productos listos
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{done}</span> / {total} productos listos
+        </span>
+        {todoCompleto && (
+          <span className="text-xs bg-green-100 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium">
+            ¡Pedido completo!
           </span>
-          {done === total && total > 0 && (
-            <span className="text-xs bg-green-100 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium">
-              ¡Pedido completo!
-            </span>
-          )}
-        </div>
-        {done > 0 && (
-          <button
-            type="button"
-            onClick={resetAll}
-            className="text-xs text-muted-foreground hover:text-foreground underline"
-          >
-            Reiniciar
-          </button>
         )}
       </div>
 
@@ -98,14 +100,12 @@ export function SurtidoChecklist({ ticketId, items }: SurtidoChecklistProps) {
                   : 'border-border hover:border-brand-accent hover:bg-brand-surface'
               }`}
             >
-              {/* Checkbox visual */}
               <div className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
                 isChecked ? 'bg-green-500 border-green-500' : 'border-border'
               }`}>
                 {isChecked && <Check size={13} className="text-white" strokeWidth={3} />}
               </div>
 
-              {/* Info del producto */}
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-medium truncate ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
                   {item.producto_nombre}
@@ -113,7 +113,6 @@ export function SurtidoChecklist({ ticketId, items }: SurtidoChecklistProps) {
                 <p className="text-xs text-muted-foreground">{item.producto_sku}</p>
               </div>
 
-              {/* Cantidad */}
               <div className={`flex-shrink-0 text-right ${isChecked ? 'text-muted-foreground' : ''}`}>
                 <p className="text-sm font-semibold">{item.cantidad}</p>
                 <p className="text-xs text-muted-foreground">pzas</p>
@@ -122,6 +121,20 @@ export function SurtidoChecklist({ ticketId, items }: SurtidoChecklistProps) {
           )
         })}
       </div>
+
+      {/* Botón — solo cuando el ticket está aprobado Y todos los items están marcados */}
+      {estado === 'aprobado' && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <Button
+            onClick={handleMarcarListo}
+            disabled={!todoCompleto || isPending}
+            className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-40"
+          >
+            <PackageCheck size={16} className="mr-2" />
+            {isPending ? 'Enviando...' : todoCompleto ? 'Pedido listo — enviar a verificación' : `Marca todos los productos (${done}/${total})`}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

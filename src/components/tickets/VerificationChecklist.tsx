@@ -3,12 +3,11 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Check, AlertTriangle } from 'lucide-react'
+import { Check, AlertTriangle, ClipboardCheck } from 'lucide-react'
 
 import { verificarItem, finalizarVerificacion } from '@/lib/actions/tickets'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
-import { formatMXN } from '@/lib/utils/format'
 
 interface ChecklistItem {
   id: string
@@ -31,33 +30,42 @@ export function VerificationChecklist({ ticketId, items: initialItems }: Verific
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [items, setItems] = useState(initialItems)
+  // Track which items have the incidencia panel expanded
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const verificados = items.filter((i) => i.verificado).length
-  const conDiscrepancia = items.filter((i) => i.discrepancia_tipo).length
-  const revisados = verificados + conDiscrepancia
   const total = items.length
+  const resueltos = items.filter((i) => i.verificado || i.discrepancia_tipo).length
+  const conIncidencias = items.filter((i) => i.discrepancia_tipo).length
+  const todoResuelto = resueltos === total && total > 0
 
-  const handleVerificar = (itemId: string, verificado: boolean) => {
+  const handleToggleVerificado = (item: ChecklistItem) => {
+    // If already verified, unverify. If has incidencia, clear it and verify. Otherwise verify.
+    const nuevoVerificado = !item.verificado
+    const nuevaDiscrepancia = nuevoVerificado ? null : item.discrepancia_tipo
+
     startTransition(async () => {
       const result = await verificarItem({
-        ticket_item_id: itemId,
-        verificado,
+        ticket_item_id: item.id,
+        verificado: nuevoVerificado,
+        discrepancia_tipo: nuevoVerificado ? null : nuevaDiscrepancia,
+        discrepancia_nota: nuevoVerificado ? null : item.discrepancia_nota,
       })
-      if (result.error) {
-        toast.error(result.error)
-        return
-      }
+      if (result.error) { toast.error(result.error); return }
       setItems((prev) =>
         prev.map((i) =>
-          i.id === itemId
-            ? { ...i, verificado, discrepancia_tipo: verificado ? null : i.discrepancia_tipo, discrepancia_nota: verificado ? null : i.discrepancia_nota }
+          i.id === item.id
+            ? { ...i, verificado: nuevoVerificado, discrepancia_tipo: nuevoVerificado ? null : i.discrepancia_tipo, discrepancia_nota: nuevoVerificado ? null : i.discrepancia_nota }
             : i
         )
       )
+      // Collapse incidencia panel when marking as correct
+      if (nuevoVerificado) {
+        setExpanded((prev) => { const s = new Set(prev); s.delete(item.id); return s })
+      }
     })
   }
 
-  const handleDiscrepancia = (itemId: string, tipo: string, nota: string) => {
+  const handleGuardarIncidencia = (itemId: string, tipo: string, nota: string) => {
     startTransition(async () => {
       const result = await verificarItem({
         ticket_item_id: itemId,
@@ -65,10 +73,7 @@ export function VerificationChecklist({ ticketId, items: initialItems }: Verific
         discrepancia_tipo: tipo || null,
         discrepancia_nota: nota || null,
       })
-      if (result.error) {
-        toast.error(result.error)
-        return
-      }
+      if (result.error) { toast.error(result.error); return }
       setItems((prev) =>
         prev.map((i) =>
           i.id === itemId
@@ -82,109 +87,198 @@ export function VerificationChecklist({ ticketId, items: initialItems }: Verific
   const handleFinalizar = () => {
     startTransition(async () => {
       const result = await finalizarVerificacion(ticketId)
-      if (result.error) {
-        toast.error(result.error)
-        return
-      }
+      if (result.error) { toast.error(result.error); return }
       toast.success(
         result.data!.estado === 'verificado'
-          ? 'Ticket verificado correctamente'
-          : 'Ticket marcado con incidencias'
+          ? 'Pedido verificado correctamente'
+          : 'Pedido marcado con incidencias'
       )
       router.push('/checador')
     })
   }
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Progreso */}
-      <div className="flex items-center justify-between bg-brand-surface rounded-lg p-4">
-        <span className="text-sm">
-          {revisados} de {total} items revisados
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{resueltos}</span> / {total} productos revisados
         </span>
-        <div className="w-48 bg-brand-muted rounded-full h-2">
-          <div
-            className="bg-brand-accent rounded-full h-2 transition-all"
-            style={{ width: `${total > 0 ? (revisados / total) * 100 : 0}%` }}
-          />
-        </div>
+        {conIncidencias > 0 && (
+          <span className="text-xs bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-medium">
+            {conIncidencias} incidencia{conIncidencias > 1 ? 's' : ''}
+          </span>
+        )}
+        {todoResuelto && conIncidencias === 0 && (
+          <span className="text-xs bg-green-100 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium">
+            ¡Todo correcto!
+          </span>
+        )}
       </div>
 
-      {/* Items */}
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div key={item.id} className="border border-border rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <span className="font-medium text-sm">{item.producto_nombre}</span>
-                <span className="text-xs text-muted-foreground ml-2">{item.producto_sku}</span>
-              </div>
-              <div className="text-sm text-right">
-                <span className="text-muted-foreground">Cant: </span>
-                <span className="font-medium">{Number(item.cantidad)}</span>
-                <span className="text-muted-foreground ml-3">{formatMXN(Number(item.subtotal))}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 mt-3">
-              <Button
-                size="sm"
-                variant={item.verificado ? 'default' : 'outline'}
-                onClick={() => handleVerificar(item.id, true)}
-                disabled={isPending}
-              >
-                <Check size={14} className="mr-1" />
-                Correcto
-              </Button>
-              <Button
-                size="sm"
-                variant={item.discrepancia_tipo ? 'destructive' : 'outline'}
-                onClick={() => {
-                  if (!item.discrepancia_tipo) {
-                    handleDiscrepancia(item.id, 'faltante', '')
-                  }
-                }}
-                disabled={isPending}
-              >
-                <AlertTriangle size={14} className="mr-1" />
-                Incidencia
-              </Button>
-            </div>
-
-            {/* Campos de discrepancia */}
-            {item.discrepancia_tipo && (
-              <div className="mt-3 pl-4 border-l-2 border-red-300 space-y-2">
-                <Select
-                  value={item.discrepancia_tipo}
-                  onChange={(e) => handleDiscrepancia(item.id, e.target.value, item.discrepancia_nota ?? '')}
-                  className="w-48"
-                >
-                  <option value="faltante">Faltante</option>
-                  <option value="sobrante">Sobrante</option>
-                  <option value="incorrecto">Incorrecto</option>
-                  <option value="danado">Dañado</option>
-                </Select>
-                <input
-                  type="text"
-                  value={item.discrepancia_nota ?? ''}
-                  onChange={(e) => handleDiscrepancia(item.id, item.discrepancia_tipo!, e.target.value)}
-                  placeholder="Nota sobre la incidencia..."
-                  className="w-full bg-white border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
-                />
-              </div>
-            )}
-          </div>
-        ))}
+      {/* Barra de progreso */}
+      <div className="w-full h-1.5 bg-brand-surface rounded-full mb-5 overflow-hidden">
+        <div
+          className="h-full bg-green-500 rounded-full transition-all duration-300"
+          style={{ width: total > 0 ? `${(resueltos / total) * 100}%` : '0%' }}
+        />
       </div>
 
-      {/* Finalizar */}
-      {revisados === total && total > 0 && (
-        <div className="border-t border-border pt-4">
-          <Button onClick={handleFinalizar} disabled={isPending} className="w-full">
-            {isPending ? 'Finalizando...' : 'Finalizar verificación'}
+      {/* Lista */}
+      <div className="space-y-2">
+        {items.map((item) => {
+          const isExpanded = expanded.has(item.id)
+          const hasIncidencia = !!item.discrepancia_tipo
+          const isResuelto = item.verificado || hasIncidencia
+
+          return (
+            <div
+              key={item.id}
+              className={`rounded-lg border transition-all ${
+                item.verificado
+                  ? 'border-green-200 bg-green-50/50 opacity-60'
+                  : hasIncidencia
+                  ? 'border-amber-200 bg-amber-50/50'
+                  : 'border-border'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => handleToggleVerificado(item)}
+                disabled={isPending}
+                className="w-full flex items-center gap-3 p-3 text-left"
+              >
+                {/* Checkbox */}
+                <div className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                  item.verificado
+                    ? 'bg-green-500 border-green-500'
+                    : hasIncidencia
+                    ? 'bg-amber-400 border-amber-400'
+                    : 'border-border'
+                }`}>
+                  {item.verificado && <Check size={13} className="text-white" strokeWidth={3} />}
+                  {hasIncidencia && !item.verificado && <AlertTriangle size={11} className="text-white" strokeWidth={3} />}
+                </div>
+
+                {/* Nombre y SKU */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${item.verificado ? 'line-through text-muted-foreground' : ''}`}>
+                    {item.producto_nombre}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{item.producto_sku}</p>
+                </div>
+
+                {/* Cantidad */}
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-sm font-semibold">{item.cantidad}</p>
+                  <p className="text-xs text-muted-foreground">pzas</p>
+                </div>
+              </button>
+
+              {/* Botón incidencia — solo si no está verificado */}
+              {!item.verificado && (
+                <div className="px-3 pb-3 pt-0">
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((prev) => {
+                      const s = new Set(prev)
+                      if (s.has(item.id)) { s.delete(item.id) } else { s.add(item.id) }
+                      return s
+                    })}
+                    className="text-xs text-muted-foreground hover:text-amber-600 transition-colors flex items-center gap-1"
+                  >
+                    <AlertTriangle size={11} />
+                    {hasIncidencia ? 'Editar incidencia' : 'Reportar incidencia'}
+                  </button>
+
+                  {isExpanded && (
+                    <IncidenciaPanel
+                      tipo={item.discrepancia_tipo ?? 'faltante'}
+                      nota={item.discrepancia_nota ?? ''}
+                      isPending={isPending}
+                      onSave={(tipo, nota) => {
+                        handleGuardarIncidencia(item.id, tipo, nota)
+                        setExpanded((prev) => { const s = new Set(prev); s.delete(item.id); return s })
+                      }}
+                      onCancel={() => setExpanded((prev) => { const s = new Set(prev); s.delete(item.id); return s })}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Botón finalizar */}
+      {todoResuelto && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <Button
+            onClick={handleFinalizar}
+            disabled={isPending}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+          >
+            <ClipboardCheck size={16} className="mr-2" />
+            {isPending ? 'Finalizando...' : conIncidencias > 0 ? 'Finalizar con incidencias' : 'Confirmar pedido verificado'}
           </Button>
         </div>
       )}
+    </div>
+  )
+}
+
+function IncidenciaPanel({
+  tipo,
+  nota,
+  isPending,
+  onSave,
+  onCancel,
+}: {
+  tipo: string
+  nota: string
+  isPending: boolean
+  onSave: (tipo: string, nota: string) => void
+  onCancel: () => void
+}) {
+  const [localTipo, setLocalTipo] = useState(tipo)
+  const [localNota, setLocalNota] = useState(nota)
+
+  return (
+    <div className="mt-2 pl-3 border-l-2 border-amber-300 space-y-2">
+      <Select
+        value={localTipo}
+        onChange={(e) => setLocalTipo(e.target.value)}
+        className="w-48"
+      >
+        <option value="faltante">Faltante</option>
+        <option value="sobrante">Sobrante</option>
+        <option value="incorrecto">Incorrecto</option>
+        <option value="danado">Dañado</option>
+      </Select>
+      <input
+        type="text"
+        value={localNota}
+        onChange={(e) => setLocalNota(e.target.value)}
+        placeholder="Descripción de la incidencia..."
+        className="w-full bg-white border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => onSave(localTipo, localNota)}
+          className="text-xs font-medium text-amber-700 hover:text-amber-800 border border-amber-300 rounded px-2 py-1"
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   )
 }

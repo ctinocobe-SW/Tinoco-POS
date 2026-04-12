@@ -69,6 +69,7 @@ export const recepcionItemSchema = z.object({
   cantidad_recibida: z.number().positive('La cantidad debe ser mayor a 0'),
   fecha_caducidad: z.string().optional(),
   discrepancia: z.string().max(500).optional(),
+  zona_id: z.string().uuid().optional(),
 })
 
 export const crearRecepcionSchema = z.object({

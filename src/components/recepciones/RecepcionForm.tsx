@@ -23,8 +23,17 @@ interface Almacen {
   tipo: string
 }
 
+interface Zona {
+  id: string
+  nombre: string
+  almacen_id: string
+  despachador_nombre: string | null
+}
+
 interface RecepcionFormProps {
   almacenes: Almacen[]
+  zonas: Zona[]
+  rol: string
 }
 
 interface ProveedorResult {
@@ -40,9 +49,14 @@ interface ProductoResult {
   requiere_caducidad: boolean
 }
 
-export function RecepcionForm({ almacenes }: RecepcionFormProps) {
+export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+
+  // Despachadores solo ven sucursales; admin ve todos
+  const almacenesDisponibles = rol === 'admin'
+    ? almacenes
+    : almacenes.filter((a) => a.tipo === 'sucursal')
 
   // Proveedor search
   const [proveedorQuery, setProveedorQuery] = useState('')
@@ -60,7 +74,7 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
     resolver: zodResolver(crearRecepcionSchema),
     defaultValues: {
       proveedor_id: undefined,
-      almacen_id: almacenes[0]?.id ?? '',
+      almacen_id: almacenesDisponibles[0]?.id ?? '',
       fecha: new Date().toISOString().split('T')[0],
       notas: '',
       items: [],
@@ -69,6 +83,12 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
 
   const { register, handleSubmit, control, setValue, formState: { errors }, watch } = form
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
+
+  const watchedAlmacenId = watch('almacen_id')
+  const watchedItems = watch('items')
+
+  // Zonas filtradas por almacén seleccionado
+  const zonasDelAlmacen = zonas.filter((z) => z.almacen_id === watchedAlmacenId)
 
   // Buscar proveedores
   useEffect(() => {
@@ -120,6 +140,7 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
       cantidad_esperada: undefined,
       fecha_caducidad: undefined,
       discrepancia: undefined,
+      zona_id: undefined,
     })
     setProductoQuery('')
     setProductosResults([])
@@ -140,8 +161,6 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
       setSubmitting(false)
     }
   }
-
-  const watchedItems = watch('items')
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
@@ -190,7 +209,7 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
           <div className="space-y-1.5">
             <Label htmlFor="almacen_id">Almacén *</Label>
             <Select id="almacen_id" {...register('almacen_id')}>
-              {almacenes.map((a) => (
+              {almacenesDisponibles.map((a) => (
                 <option key={a.id} value={a.id}>{a.nombre}</option>
               ))}
             </Select>
@@ -198,26 +217,25 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          {/* Fecha */}
-          <div className="space-y-1.5">
-            <Label htmlFor="fecha">Fecha</Label>
-            <Input
-              id="fecha"
-              type="date"
-              {...register('fecha')}
-            />
-          </div>
+        {/* Fecha — fila completa */}
+        <div className="space-y-1.5">
+          <Label htmlFor="fecha">Fecha</Label>
+          <Input
+            id="fecha"
+            type="date"
+            className="max-w-xs"
+            {...register('fecha')}
+          />
+        </div>
 
-          {/* Notas */}
-          <div className="space-y-1.5">
-            <Label htmlFor="notas">Notas</Label>
-            <Input
-              id="notas"
-              {...register('notas')}
-              placeholder="Observaciones..."
-            />
-          </div>
+        {/* Notas — fila completa */}
+        <div className="space-y-1.5">
+          <Label htmlFor="notas">Notas</Label>
+          <Input
+            id="notas"
+            {...register('notas')}
+            placeholder="Observaciones sobre esta recepción..."
+          />
         </div>
       </div>
 
@@ -269,6 +287,7 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
                 <th className="px-4 py-2 text-center w-28">Esperada</th>
                 <th className="px-4 py-2 text-center w-28">Recibida *</th>
                 <th className="px-4 py-2 text-center w-32">Caducidad</th>
+                <th className="px-4 py-2 text-left w-40">Zona</th>
                 <th className="px-4 py-2 w-8"></th>
               </tr>
             </thead>
@@ -318,6 +337,23 @@ export function RecepcionForm({ almacenes }: RecepcionFormProps) {
                         />
                       ) : (
                         <span className="text-xs text-muted-foreground">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      {zonasDelAlmacen.length > 0 ? (
+                        <select
+                          {...register(`items.${index}.zona_id`)}
+                          className="w-full bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                        >
+                          <option value="">Sin zona</option>
+                          {zonasDelAlmacen.map((z) => (
+                            <option key={z.id} value={z.id}>
+                              {z.nombre}{z.despachador_nombre ? ` (${z.despachador_nombre})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="px-4 py-2">
