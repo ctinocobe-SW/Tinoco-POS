@@ -181,6 +181,45 @@ export async function aprobarTicket(input: {
   return { data: { estado: estadoMap[accion] } }
 }
 
+export async function marcarListoParaVerificacion(ticketId: string) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (!['admin', 'despachador'].includes(profile.rol)) {
+    return { error: 'Sin permisos' }
+  }
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('id, estado, despachador_id')
+    .eq('id', ticketId)
+    .single()
+
+  if (!ticket) return { error: 'Ticket no encontrado' }
+
+  // El despachador solo puede marcar sus propios tickets
+  if (profile.rol === 'despachador' && (ticket as any).despachador_id !== profile.id) {
+    return { error: 'No tienes permiso para modificar este ticket' }
+  }
+
+  if ((ticket as any).estado !== 'aprobado') {
+    return { error: 'El ticket debe estar aprobado para marcarlo como listo' }
+  }
+
+  const { error } = await supabase
+    .from('tickets')
+    .update({ estado: 'en_verificacion' })
+    .eq('id', ticketId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/despachador/tickets')
+  revalidatePath(`/despachador/tickets/${ticketId}`)
+  revalidatePath('/checador')
+  revalidatePath('/admin/tickets')
+
+  return { data: { ok: true } }
+}
+
 export async function verificarItem(input: {
   ticket_item_id: string
   verificado: boolean
@@ -206,24 +245,23 @@ export async function verificarItem(input: {
     return { error: 'Item no encontrado' }
   }
 
-  // Verificar que el ticket esté en estado válido
+  // Verificar que el ticket esté en_verificacion (el despachador ya lo marcó como listo)
   const { data: ticket } = await supabase
     .from('tickets')
     .select('id, estado')
     .eq('id', (item as any).ticket_id)
     .single()
 
-  if (!ticket || !['aprobado', 'en_verificacion'].includes((ticket as any).estado)) {
-    return { error: 'El ticket no está en estado de verificación' }
+  if (!ticket || (ticket as any).estado !== 'en_verificacion') {
+    return { error: 'El ticket no está listo para verificación' }
   }
 
-  // Si es el primer item verificado, cambiar estado del ticket a en_verificacion
-  if ((ticket as any).estado === 'aprobado') {
-    await supabase
-      .from('tickets')
-      .update({ estado: 'en_verificacion', checador_id: profile.id })
-      .eq('id', (item as any).ticket_id)
-  }
+  // Asignar checador si no tiene uno
+  await supabase
+    .from('tickets')
+    .update({ checador_id: profile.id })
+    .eq('id', (item as any).ticket_id)
+    .is('checador_id', null)
 
   // Actualizar el item
   const { error: updateError } = await supabase
