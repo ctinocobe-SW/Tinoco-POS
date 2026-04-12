@@ -45,6 +45,9 @@ const navByRole: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: 'Surtido', href: '/checador/surtido', icon: Truck },
     { label: 'Historial', href: '/checador/historial', icon: Receipt },
   ],
+  cajero: [
+    { label: 'Inicio', href: '/cajero', icon: LayoutDashboard },
+  ],
 }
 
 export function Sidebar({ rol, nombre }: SidebarProps) {

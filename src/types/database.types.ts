@@ -10,7 +10,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type UserRole = 'admin' | 'despachador' | 'checador'
+export type UserRole = 'admin' | 'despachador' | 'checador' | 'cajero'
 export type TicketEstado =
   | 'borrador'
   | 'pendiente_aprobacion'

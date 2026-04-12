@@ -18,7 +18,7 @@ export default async function ConfiguracionPage() {
 
   if ((profile as any)?.rol !== 'admin') redirect('/')
 
-  const [{ data: almacenes }, { data: proveedores }] = await Promise.all([
+  const [{ data: almacenes }, { data: proveedores }, { data: usuarios }] = await Promise.all([
     supabase
       .from('almacenes')
       .select('id, nombre, ubicacion, tipo, activo')
@@ -26,6 +26,10 @@ export default async function ConfiguracionPage() {
     supabase
       .from('proveedores')
       .select('id, nombre, razon_social, rfc, contacto, telefono, email, activo')
+      .order('nombre', { ascending: true }),
+    supabase
+      .from('profiles')
+      .select('id, nombre, email, rol, activo')
       .order('nombre', { ascending: true }),
   ])
 
@@ -48,16 +52,24 @@ export default async function ConfiguracionPage() {
     activo: p.activo as boolean,
   }))
 
+  const usuariosList = (usuarios ?? []).map((u: any) => ({
+    id: u.id as string,
+    nombre: u.nombre as string,
+    email: u.email as string,
+    rol: u.rol as 'admin' | 'despachador' | 'checador' | 'cajero',
+    activo: u.activo as boolean,
+  }))
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-heading font-semibold">Configuración</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Gestión de almacenes y proveedores
+          Gestión de almacenes, proveedores y usuarios
         </p>
       </div>
 
-      <ConfigTabs almacenes={almacenesList} proveedores={proveedoresList} />
+      <ConfigTabs almacenes={almacenesList} proveedores={proveedoresList} usuarios={usuariosList} />
     </div>
   )
 }
