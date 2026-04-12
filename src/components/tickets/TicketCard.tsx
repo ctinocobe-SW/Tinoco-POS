@@ -13,14 +13,15 @@ interface TicketCardProps {
     cliente_nombre?: string
   }
   href?: string
+  context?: 'despachador'
 }
 
-export function TicketCard({ ticket, href }: TicketCardProps) {
+export function TicketCard({ ticket, href, context }: TicketCardProps) {
   const content = (
     <div className="border border-border rounded-lg p-4 hover:bg-brand-surface transition-colors">
       <div className="flex items-center justify-between mb-2">
         <span className="font-medium text-sm">{ticket.folio}</span>
-        <TicketStatusBadge estado={ticket.estado} />
+        <TicketStatusBadge estado={ticket.estado} context={context} />
       </div>
       {ticket.cliente_nombre && (
         <p className="text-sm text-muted-foreground mb-1">{ticket.cliente_nombre}</p>

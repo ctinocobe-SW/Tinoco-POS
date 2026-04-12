@@ -69,7 +69,7 @@ export default async function DespachadorPage() {
       {ticketsList.length > 0 ? (
         <div className="space-y-3">
           {ticketsList.map((t) => (
-            <TicketCard key={t.id} ticket={t} />
+            <TicketCard key={t.id} ticket={t} href={`/despachador/tickets/${t.id}`} context="despachador" />
           ))}
         </div>
       ) : (

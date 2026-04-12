@@ -21,7 +21,7 @@ export default async function ChecadorPage() {
   const { data: tickets } = await supabase
     .from('tickets')
     .select('id, folio, estado, total, created_at, clientes(nombre)')
-    .in('estado', ['aprobado', 'en_verificacion'])
+    .eq('estado', 'en_verificacion')
     .order('created_at', { ascending: true })
 
   const ticketsList = (tickets ?? []).map((t: any) => ({

@@ -1,7 +1,9 @@
 import { Badge } from '@/components/ui/badge'
 import type { TicketEstado } from '@/types/database.types'
 
-const estadoConfig: Record<TicketEstado, { label: string; variant: 'default' | 'warning' | 'success' | 'error' | 'info' }> = {
+type Variant = 'default' | 'warning' | 'success' | 'error' | 'info'
+
+const estadoConfig: Record<TicketEstado, { label: string; variant: Variant }> = {
   borrador: { label: 'Borrador', variant: 'default' },
   pendiente_aprobacion: { label: 'Pendiente', variant: 'warning' },
   aprobado: { label: 'Aprobado', variant: 'success' },
@@ -16,11 +18,20 @@ const estadoConfig: Record<TicketEstado, { label: string; variant: 'default' | '
   cancelado: { label: 'Cancelado', variant: 'error' },
 }
 
-interface TicketStatusBadgeProps {
-  estado: TicketEstado
+// Labels del punto de vista del despachador
+const estadoConfigDespachador: Partial<Record<TicketEstado, { label: string; variant: Variant }>> = {
+  en_verificacion: { label: 'Terminado · En verificación', variant: 'info' },
+  verificado: { label: 'Terminado · Listo para entrega', variant: 'success' },
+  con_incidencias: { label: 'Terminado · Con incidencias', variant: 'warning' },
 }
 
-export function TicketStatusBadge({ estado }: TicketStatusBadgeProps) {
-  const config = estadoConfig[estado] ?? { label: estado, variant: 'default' as const }
+interface TicketStatusBadgeProps {
+  estado: TicketEstado
+  context?: 'despachador'
+}
+
+export function TicketStatusBadge({ estado, context }: TicketStatusBadgeProps) {
+  const override = context === 'despachador' ? estadoConfigDespachador[estado] : undefined
+  const config = override ?? estadoConfig[estado] ?? { label: estado, variant: 'default' as Variant }
   return <Badge variant={config.variant}>{config.label}</Badge>
 }
