@@ -12,6 +12,8 @@ import { searchClientes } from '@/lib/queries/clientes'
 import { searchProductos } from '@/lib/queries/productos'
 import { crearTicket } from '@/lib/actions/tickets'
 import { formatMXN } from '@/lib/utils/format'
+import { useOffline } from '@/components/providers/OfflineProvider'
+import { offlineDB } from '@/lib/offline/db'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +27,7 @@ type ProductoResult = {
 export function TicketForm() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+  const { isOnline } = useOffline()
 
   // Cliente search
   const [clienteQuery, setClienteQuery] = useState('')
@@ -115,6 +118,47 @@ export function TicketForm() {
 
   const onSubmit = async (data: CrearTicketInput) => {
     setSubmitting(true)
+
+    // Modo offline: guardar localmente en Dexie
+    if (!isOnline) {
+      const folioLocal = `OFFLINE-${Date.now()}`
+      try {
+        await offlineDB.tickets.add({
+          id: folioLocal,
+          folio_local: folioLocal,
+          cliente_id: data.cliente_id,
+          cliente_nombre: selectedCliente?.nombre ?? '',
+          items: data.items.map((item) => {
+            const meta = productosMeta.get(item.producto_id)
+            return {
+              producto_id: item.producto_id,
+              sku: meta?.sku ?? '',
+              nombre: meta?.nombre ?? '',
+              cantidad: item.cantidad,
+              precio_unitario: item.precio_unitario,
+            }
+          }),
+          notas: data.notas,
+          created_at: new Date().toISOString(),
+          sincronizado: false,
+        })
+        await offlineDB.syncQueue.add({
+          tipo: 'create_ticket',
+          payload: { input: data, folio_local: folioLocal },
+          created_at: new Date().toISOString(),
+          intentos: 0,
+        })
+        toast.warning('Sin conexión — ticket guardado localmente, se enviará al reconectar')
+        router.push('/despachador/tickets')
+      } catch {
+        toast.error('Error al guardar ticket sin conexión')
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
+    // Modo online: flujo normal
     const result = await crearTicket(data)
     setSubmitting(false)
 

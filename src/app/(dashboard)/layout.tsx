@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShellClient } from '@/components/layout/ShellClient'
+import { OfflineProvider } from '@/components/providers/OfflineProvider'
 import type { UserRole } from '@/types/database.types'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -29,11 +30,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <ShellClient
-      profile={{ nombre: profile.nombre, rol: profile.rol as UserRole, email: profile.email }}
-      badges={{ creditosVencidos }}
-    >
-      {children}
-    </ShellClient>
+    <OfflineProvider>
+      <ShellClient
+        profile={{ nombre: profile.nombre, rol: profile.rol as UserRole, email: profile.email }}
+        badges={{ creditosVencidos }}
+      >
+        {children}
+      </ShellClient>
+    </OfflineProvider>
   )
 }

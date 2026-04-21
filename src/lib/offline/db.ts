@@ -63,7 +63,7 @@ class POSDatabase extends Dexie {
 
     this.version(1).stores({
       tickets: 'id, folio_local, sincronizado, created_at',
-      syncQueue: '++id, tipo, created_at, sincronizado',
+      syncQueue: '++id, tipo, created_at',
       productos: 'id, sku, codigo_barras, cached_at',
       clientes: 'id, nombre, rfc, cached_at',
     })

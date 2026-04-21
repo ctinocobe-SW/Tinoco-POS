@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { TicketCard } from '@/components/tickets/TicketCard'
 import { TicketsRealtimeRefresh } from '@/components/tickets/TicketsRealtimeRefresh'
+import { OfflineTicketsList } from '@/components/tickets/OfflineTicketsList'
 import { Button } from '@/components/ui/button'
 
 export const metadata = { title: 'Mis Tickets — POS TINOCO' }
@@ -49,6 +50,8 @@ export default async function TicketsPage() {
           </Button>
         </Link>
       </div>
+
+      <OfflineTicketsList />
 
       {ticketsList.length > 0 ? (
         <div className="space-y-3">

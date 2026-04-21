@@ -1,7 +1,28 @@
 import { createClient } from '@/lib/supabase/client'
+import { offlineDB } from '@/lib/offline/db'
 
 export async function searchClientes(query: string) {
   if (!query || query.length < 2) return []
+
+  // Fallback a cache local cuando no hay conexión
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    const q = query.toLowerCase()
+    const cached = await offlineDB.clientes
+      .filter(
+        (c) =>
+          c.nombre.toLowerCase().includes(q) ||
+          (c.rfc ?? '').toLowerCase().includes(q)
+      )
+      .limit(10)
+      .toArray()
+    return cached.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      rfc: c.rfc ?? null,
+      limite_credito: 0,
+      credito_habilitado: false,
+    }))
+  }
 
   const supabase = createClient()
   const { data, error } = await supabase
