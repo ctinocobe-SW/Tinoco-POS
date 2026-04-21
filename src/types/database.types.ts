@@ -33,6 +33,8 @@ export type MetodoPagoCredito = 'efectivo' | 'transferencia' | 'cheque' | 'otro'
 export type FacturaEstado = 'pendiente' | 'timbrada' | 'cancelada' | 'error'
 export type WhatsappMensajeTipo = 'text' | 'image' | 'audio' | 'document' | 'location' | 'interactive'
 export type WhatsappMensajeEstado = 'nuevo' | 'procesando' | 'ticket_creado' | 'ignorado' | 'error'
+export type ListaAlmacenEstado = 'borrador' | 'finalizada'
+export type TraspasoEstado = 'pendiente' | 'en_transito' | 'recibido' | 'cancelado'
 
 export interface Database {
   public: {
@@ -115,6 +117,7 @@ export interface Database {
           cobro_pendiente: boolean
           es_credito: boolean
           credito_id: string | null
+          tiempo_despacho_segundos: number | null
           created_at: string
           updated_at: string
         }
@@ -169,6 +172,7 @@ export interface Database {
           categoria: string | null
           unidad_medida: string
           peso_kg: number
+          volumen_m3: number
           precio_base: number
           precio_mayoreo: number
           costo: number
@@ -176,10 +180,14 @@ export interface Database {
           vende_kg: boolean
           vende_caja: boolean
           vende_bulto: boolean
+          piezas_por_caja: number | null
+          piezas_por_bulto: number | null
           tasa_iva: number
           tasa_ieps: number
           requiere_caducidad: boolean
+          fecha_caducidad: string | null
           codigo_barras: string | null
+          lleva_inventario: boolean
           activo: boolean
           created_at: string
           updated_at: string
@@ -239,6 +247,7 @@ export interface Database {
           cantidad_recibida: number
           fecha_caducidad: string | null
           discrepancia: string | null
+          zona_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['recepcion_items']['Row'], 'created_at'>
@@ -355,6 +364,143 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['whatsapp_mensajes']['Row'], 'created_at'>
         Update: Partial<Database['public']['Tables']['whatsapp_mensajes']['Insert']>
+      }
+      vehiculos: {
+        Row: {
+          id: string
+          nombre: string
+          placa: string | null
+          capacidad_kg: number
+          capacidad_m3: number | null
+          activo: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['vehiculos']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['vehiculos']['Insert']>
+      }
+      listas_surtido: {
+        Row: {
+          id: string
+          almacen_destino_id: string
+          almacen_origen_id: string | null
+          creado_por: string
+          estado: ListaSurtidoEstado
+          peso_total_kg: number
+          vehiculo_id: string | null
+          numero_viajes: number
+          notas: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['listas_surtido']['Row'], 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['listas_surtido']['Insert']>
+      }
+      lista_surtido_items: {
+        Row: {
+          id: string
+          lista_id: string
+          producto_id: string
+          cantidad: number
+          peso_parcial_kg: number
+          viaje_numero: number
+          entregado: boolean
+          entregado_at: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['lista_surtido_items']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['lista_surtido_items']['Insert']>
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          usuario_id: string | null
+          accion: string
+          entidad: string
+          entidad_id: string | null
+          datos_antes: Record<string, unknown> | null
+          datos_despues: Record<string, unknown> | null
+          ip: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['audit_logs']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['audit_logs']['Insert']>
+      }
+      listas_almacen: {
+        Row: {
+          id: string
+          nombre: string
+          notas: string | null
+          estado: ListaAlmacenEstado
+          creado_por: string | null
+          almacen_id: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['listas_almacen']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['listas_almacen']['Insert']>
+      }
+      lista_almacen_items: {
+        Row: {
+          id: string
+          lista_id: string
+          producto_id: string
+          cantidad: number
+          notas: string | null
+          checado: boolean
+          checado_at: string | null
+          checado_por: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['lista_almacen_items']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['lista_almacen_items']['Insert']>
+      }
+      producto_proveedor: {
+        Row: {
+          producto_id: string
+          proveedor_id: string
+          created_at: string
+        }
+        Insert: Database['public']['Tables']['producto_proveedor']['Row']
+        Update: Partial<Database['public']['Tables']['producto_proveedor']['Row']>
+      }
+      zonas: {
+        Row: {
+          id: string
+          nombre: string
+          almacen_id: string
+          despachador_id: string | null
+          activo: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['zonas']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['zonas']['Insert']>
+      }
+      traspasos: {
+        Row: {
+          id: string
+          folio: string
+          almacen_origen_id: string
+          almacen_destino_id: string
+          estado: string
+          solicitado_por: string | null
+          recibido_por: string | null
+          notas: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['traspasos']['Row'], 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['traspasos']['Insert']>
+      }
+      traspaso_items: {
+        Row: {
+          id: string
+          traspaso_id: string
+          producto_id: string
+          cantidad_solicitada: number
+          cantidad_recibida: number | null
+          notas: string | null
+        }
+        Insert: Database['public']['Tables']['traspaso_items']['Row']
+        Update: Partial<Database['public']['Tables']['traspaso_items']['Row']>
       }
     }
     Views: Record<string, never>

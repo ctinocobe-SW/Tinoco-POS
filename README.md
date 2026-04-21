@@ -76,14 +76,16 @@ pos-tinoco/
 
 | Fase | Alcance | Estado |
 |------|---------|--------|
-| 0 | Infraestructura base | ✅ Completa |
-| 1 | Flujo core de ventas (tickets) | 🔜 Siguiente |
-| 2 | Inventarios multi-almacén | ⏳ Pendiente |
-| 3 | Logística de surtido | ⏳ Pendiente |
-| 4 | WhatsApp + CFDI 4.0 | ⏳ Pendiente |
+| 0 | Infraestructura base (auth, RLS, DB schema) | ✅ Completa |
+| 1 | Flujo core de ventas (tickets) | 🚧 En progreso |
+| 2 | Inventarios multi-almacén | 🚧 En progreso |
+| 3 | Logística de surtido | 🚧 En progreso |
+| 4 | WhatsApp + CFDI 4.0 + Créditos | 🚧 En progreso |
 | 5 | PWA offline | ⏳ Pendiente |
 | 6 | Analítica y dashboards | ⏳ Pendiente |
 | 7 | Optimización y escalado | ⏳ Pendiente |
+
+> **🚧 En progreso** = esquema de DB completo en Supabase y componentes UI creados; pendiente integración completa y pruebas end-to-end.
 
 ---
 
