@@ -8,7 +8,7 @@ import { Search, Trash2, Plus } from 'lucide-react'
 
 import { crearTicketSchema } from '@/lib/validations/schemas'
 import type { CrearTicketInput } from '@/lib/validations/schemas'
-import { crearTicket } from '@/lib/actions/tickets'
+import { crearTicket, obtenerDespachadorSugerido } from '@/lib/actions/tickets'
 import { searchClientes } from '@/lib/queries/clientes'
 import { searchProductos } from '@/lib/queries/productos'
 import { Dialog } from '@/components/ui/dialog'
@@ -38,6 +38,9 @@ interface ItemMeta {
 
 export function AdminCreateTicketDialog({ open, onClose, despachadores, almacenes }: AdminCreateTicketDialogProps) {
   const [submitting, setSubmitting] = useState(false)
+  const [asignacionMode, setAsignacionMode] = useState<'manual' | 'auto'>('manual')
+  const [autoSugerido, setAutoSugerido] = useState<{ id: string; nombre: string } | null>(null)
+  const [loadingAuto, setLoadingAuto] = useState(false)
 
   // Cliente search
   const [clienteQuery, setClienteQuery] = useState('')
@@ -55,7 +58,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
     resolver: zodResolver(crearTicketSchema),
     defaultValues: {
       cliente_id: '',
-      despachador_id: despachadores[0]?.id ?? '',
+      despachador_id: '',
       almacen_id: almacenes[0]?.id ?? '',
       notas: '',
       items: [],
@@ -70,7 +73,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
     if (!open) {
       reset({
         cliente_id: '',
-        despachador_id: despachadores[0]?.id ?? '',
+        despachador_id: '',
         almacen_id: almacenes[0]?.id ?? '',
         notas: '',
         items: [],
@@ -79,8 +82,10 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
       setClienteSeleccionado(null)
       setProductoQuery('')
       setItemsMeta(new Map())
+      setAsignacionMode('manual')
+      setAutoSugerido(null)
     }
-  }, [open, reset, despachadores, almacenes])
+  }, [open, reset, almacenes])
 
   // Buscar clientes
   useEffect(() => {
@@ -111,6 +116,27 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
     }, 250)
     return () => clearTimeout(timer)
   }, [productoQuery])
+
+  // Obtener sugerencia automática cuando el modo cambia a 'auto'
+  useEffect(() => {
+    if (!open || asignacionMode !== 'auto') return
+    let cancelled = false
+    setLoadingAuto(true)
+    setAutoSugerido(null)
+    ;(async () => {
+      const result = await obtenerDespachadorSugerido()
+      if (cancelled) return
+      if (result.error || !result.data) {
+        toast.error(result.error ?? 'No hay despachadores disponibles')
+        setAsignacionMode('manual')
+      } else {
+        setAutoSugerido(result.data)
+        setValue('despachador_id', result.data.id)
+      }
+      setLoadingAuto(false)
+    })()
+    return () => { cancelled = true }
+  }, [asignacionMode, open, setValue])
 
   const handleSelectCliente = (c: { id: string; nombre: string; rfc: string | null }) => {
     setClienteSeleccionado(c)
@@ -152,6 +178,10 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
   const total = totales.subtotal + totales.iva + totales.ieps
 
   const onSubmit = async (data: CrearTicketInput) => {
+    if (!data.despachador_id) {
+      toast.error('Debes asignar un despachador (manual o automático)')
+      return
+    }
     setSubmitting(true)
     try {
       const result = await crearTicket(data)
@@ -201,12 +231,47 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
 
           {/* Despachador */}
           <div className="space-y-1.5">
-            <Label htmlFor="despachador_id">Despachador *</Label>
-            <Select id="despachador_id" {...register('despachador_id')}>
-              {despachadores.map((d) => (
-                <option key={d.id} value={d.id}>{d.nombre} ({d.rol})</option>
-              ))}
-            </Select>
+            <Label>Despachador *</Label>
+            <div className="flex gap-4 text-sm mb-1.5">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="asignacion_mode"
+                  checked={asignacionMode === 'manual'}
+                  onChange={() => { setAsignacionMode('manual'); setValue('despachador_id', '') }}
+                  className="accent-brand-accent"
+                />
+                Manual
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="asignacion_mode"
+                  checked={asignacionMode === 'auto'}
+                  onChange={() => setAsignacionMode('auto')}
+                  className="accent-brand-accent"
+                />
+                Automático
+              </label>
+            </div>
+            {asignacionMode === 'manual' ? (
+              <Select id="despachador_id" {...register('despachador_id')}>
+                <option value="">Selecciona un despachador...</option>
+                {despachadores.map((d) => (
+                  <option key={d.id} value={d.id}>{d.nombre}</option>
+                ))}
+              </Select>
+            ) : (
+              <div className="px-3 py-2 border border-border rounded-md bg-brand-surface/40 text-sm min-h-[38px] flex items-center">
+                {loadingAuto ? (
+                  <span className="text-muted-foreground">Calculando despachador con menor carga...</span>
+                ) : autoSugerido ? (
+                  <span>Asignado a <span className="font-medium">{autoSugerido.nombre}</span></span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Almacén */}

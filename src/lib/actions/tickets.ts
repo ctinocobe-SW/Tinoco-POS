@@ -18,7 +18,24 @@ export async function crearTicket(input: CrearTicketInput) {
   }
 
   const { cliente_id, despachador_id: inputDespachadorId, almacen_id, items, notas } = parsed.data
-  const despachadorId = (inputDespachadorId && profile.rol === 'admin') ? inputDespachadorId : profile.id
+
+  const isAdmin = profile.rol === 'admin'
+
+  if (isAdmin) {
+    if (!inputDespachadorId) {
+      return { error: 'Debes asignar un despachador' }
+    }
+    const { data: target } = await supabase
+      .from('profiles')
+      .select('id, rol, activo')
+      .eq('id', inputDespachadorId)
+      .single()
+    if (!target || (target as any).rol !== 'despachador' || !(target as any).activo) {
+      return { error: 'El despachador seleccionado no es válido' }
+    }
+  }
+
+  const despachadorId = isAdmin ? inputDespachadorId! : profile.id
 
   // Obtener precios reales de productos para evitar manipulación
   const productoIds = items.map((i) => i.producto_id)
@@ -60,21 +77,28 @@ export async function crearTicket(input: CrearTicketInput) {
   const total = subtotal
 
   // Insertar ticket
+  const insertPayload: Record<string, unknown> = {
+    id: crypto.randomUUID(),
+    cliente_id,
+    despachador_id: despachadorId,
+    almacen_id: almacen_id ?? profile.almacen_id,
+    estado: isAdmin ? 'aprobado' : 'pendiente_aprobacion',
+    subtotal,
+    iva: 0,
+    ieps: 0,
+    descuento: descuentoTotal,
+    total,
+    notas: notas ?? null,
+  }
+
+  if (isAdmin) {
+    insertPayload.aprobado_por = profile.id
+    insertPayload.aprobado_at = new Date().toISOString()
+  }
+
   const { data: ticket, error: ticketError } = await supabase
     .from('tickets')
-    .insert({
-      id: crypto.randomUUID(),
-      cliente_id,
-      despachador_id: despachadorId,
-      almacen_id: almacen_id ?? profile.almacen_id,
-      estado: 'pendiente_aprobacion',
-      subtotal,
-      iva: 0,
-      ieps: 0,
-      descuento: descuentoTotal,
-      total,
-      notas: notas ?? null,
-    })
+    .insert(insertPayload)
     .select('id, folio')
     .single()
 
@@ -420,7 +444,7 @@ export async function entregarTicket(ticketId: string, tiempoSegundos?: number) 
 
   if (!ticket) return { error: 'Ticket no encontrado' }
 
-  const estadosEntregables = ['aprobado', 'en_verificacion', 'verificado', 'con_incidencias']
+  const estadosEntregables = ['verificado', 'con_incidencias']
   if (!estadosEntregables.includes((ticket as any).estado)) {
     return { error: `No se puede entregar un ticket en estado "${(ticket as any).estado}"` }
   }
@@ -468,6 +492,23 @@ export async function volverAChecar(ticketId: string) {
   revalidatePath('/admin/tickets')
   revalidatePath('/checador')
   return { data: { ok: true } }
+}
+
+export async function obtenerDespachadorSugerido() {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (profile.rol !== 'admin') return { error: 'Sin permisos' }
+
+  const { data, error } = await supabase.rpc('get_despachador_menos_cargado')
+  if (error) return { error: error.message }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) return { error: 'No hay despachadores activos disponibles' }
+  return {
+    data: {
+      id: row.id as string,
+      nombre: row.nombre as string,
+      carga: Number(row.carga),
+    },
+  }
 }
 
 export async function toggleCobroPendiente(ticketId: string, pendiente: boolean) {

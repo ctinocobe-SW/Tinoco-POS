@@ -267,7 +267,7 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
   }
 
   const puedeEntregar = (estado: TicketEstado) =>
-    ['aprobado', 'en_verificacion', 'verificado', 'con_incidencias'].includes(estado)
+    ['verificado', 'con_incidencias'].includes(estado)
 
   const puedeVolverAChecar = (estado: TicketEstado) =>
     ['verificado', 'con_incidencias'].includes(estado)

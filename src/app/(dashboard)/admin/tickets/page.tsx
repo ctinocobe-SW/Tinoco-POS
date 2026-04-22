@@ -56,7 +56,7 @@ export default async function AdminTicketsPage() {
   const { data: despachadores } = await supabase
     .from('profiles')
     .select('id, nombre, rol')
-    .in('rol', ['admin', 'despachador'])
+    .eq('rol', 'despachador')
     .eq('activo', true)
     .order('nombre', { ascending: true })
 
