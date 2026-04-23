@@ -32,8 +32,6 @@ interface ItemMeta {
   sku: string
   nombre: string
   precio_base: number
-  tasa_iva: number
-  tasa_ieps: number
 }
 
 const ALMACEN_DEFAULT_NOMBRE = 'El Mercader'
@@ -157,8 +155,6 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
       sku: p.sku,
       nombre: p.nombre,
       precio_base: Number(p.precio_base),
-      tasa_iva: Number(p.tasa_iva),
-      tasa_ieps: Number(p.tasa_ieps),
     }))
     append({
       producto_id: p.id,
@@ -171,18 +167,13 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
     setShowProductoDropdown(false)
   }
 
-  // Calcular totales
-  const totales = watchedItems.reduce((acc, item) => {
-    const meta = itemsMeta.get(item.producto_id)
+  // Calcular total — precio directo sin IVA
+  const total = watchedItems.reduce((acc, item) => {
     const precio = Number(item.precio_unitario) || 0
     const cantidad = Number(item.cantidad) || 0
     const descuento = Number(item.descuento) || 0
-    const sub = precio * cantidad - descuento
-    const iva = sub * (meta?.tasa_iva ?? 0.16)
-    const ieps = sub * (meta?.tasa_ieps ?? 0)
-    return { subtotal: acc.subtotal + sub, iva: acc.iva + iva, ieps: acc.ieps + ieps }
-  }, { subtotal: 0, iva: 0, ieps: 0 })
-  const total = totales.subtotal + totales.iva + totales.ieps
+    return acc + (precio * cantidad - descuento)
+  }, 0)
 
   const onSubmit = async (data: CrearTicketInput) => {
     if (!data.despachador_id) {
@@ -389,22 +380,11 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
           )}
         </div>
 
-        {/* Totales */}
+        {/* Total */}
         {fields.length > 0 && (
           <div className="flex justify-end">
-            <div className="w-56 space-y-1 text-sm">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span><span>{formatMXN(totales.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>IVA</span><span>{formatMXN(totales.iva)}</span>
-              </div>
-              {totales.ieps > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>IEPS</span><span>{formatMXN(totales.ieps)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-semibold border-t border-border pt-1">
+            <div className="w-56 text-sm">
+              <div className="flex justify-between font-semibold border-t border-border pt-2">
                 <span>Total</span><span>{formatMXN(total)}</span>
               </div>
             </div>
