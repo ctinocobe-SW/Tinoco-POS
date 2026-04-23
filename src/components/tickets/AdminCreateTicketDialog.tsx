@@ -36,6 +36,13 @@ interface ItemMeta {
   tasa_ieps: number
 }
 
+const ALMACEN_DEFAULT_NOMBRE = 'El Mercader'
+
+function pickAlmacenDefault(almacenes: Almacen[]): string {
+  const target = almacenes.find((a) => a.nombre.trim().toLowerCase() === ALMACEN_DEFAULT_NOMBRE.toLowerCase())
+  return target?.id ?? almacenes[0]?.id ?? ''
+}
+
 export function AdminCreateTicketDialog({ open, onClose, despachadores, almacenes }: AdminCreateTicketDialogProps) {
   const [submitting, setSubmitting] = useState(false)
   const [asignacionMode, setAsignacionMode] = useState<'manual' | 'auto'>('manual')
@@ -59,7 +66,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
     defaultValues: {
       cliente_id: '',
       despachador_id: '',
-      almacen_id: almacenes[0]?.id ?? '',
+      almacen_id: pickAlmacenDefault(almacenes),
       notas: '',
       items: [],
     },
@@ -74,7 +81,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
       reset({
         cliente_id: '',
         despachador_id: '',
-        almacen_id: almacenes[0]?.id ?? '',
+        almacen_id: pickAlmacenDefault(almacenes),
         notas: '',
         items: [],
       })
@@ -276,9 +283,8 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
 
           {/* Almacén */}
           <div className="space-y-1.5">
-            <Label htmlFor="almacen_id">Almacén</Label>
+            <Label htmlFor="almacen_id">Almacén *</Label>
             <Select id="almacen_id" {...register('almacen_id')}>
-              <option value="">Sin almacén</option>
               {almacenes.map((a) => (
                 <option key={a.id} value={a.id}>{a.nombre}</option>
               ))}

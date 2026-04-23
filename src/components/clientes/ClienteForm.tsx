@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -40,10 +39,13 @@ const REGIMENES = [
   { value: '626', label: '626 - Régimen Simplificado de Confianza' },
 ]
 
+const hasFiscal = (d?: Partial<ClienteInput>) =>
+  !!(d?.rfc || d?.regimen_fiscal || d?.codigo_postal || d?.uso_cfdi)
+
 export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
-  const [showFiscal, setShowFiscal] = useState(false)
+  const [incluirFiscal, setIncluirFiscal] = useState(hasFiscal(defaultValues))
   const isEdit = !!clienteId
 
   const {
@@ -58,9 +60,9 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
       nombre: '',
       razon_social: '',
       rfc: '',
-      regimen_fiscal: '626',
+      regimen_fiscal: '',
       codigo_postal: '',
-      uso_cfdi: 'G03',
+      uso_cfdi: '',
       telefono: '',
       email: '',
       whatsapp: '',
@@ -73,11 +75,15 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
   const creditoHabilitado = watch('credito_habilitado')
 
   const onSubmit = async (data: ClienteInput) => {
+    const payload: ClienteInput = incluirFiscal
+      ? data
+      : { ...data, rfc: '', regimen_fiscal: '', codigo_postal: '', uso_cfdi: '' }
+
     setSubmitting(true)
     try {
       const result = isEdit
-        ? await actualizarCliente(clienteId, data)
-        : await crearCliente(data)
+        ? await actualizarCliente(clienteId, payload)
+        : await crearCliente(payload)
 
       if (result.error) {
         toast.error(result.error)
@@ -88,6 +94,16 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
       router.push('/admin/clientes')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleToggleFiscal = (next: boolean) => {
+    setIncluirFiscal(next)
+    if (!next) {
+      setValue('rfc', '')
+      setValue('regimen_fiscal', '')
+      setValue('codigo_postal', '')
+      setValue('uso_cfdi', '')
     }
   }
 
@@ -148,19 +164,28 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
         </div>
       </div>
 
-      {/* Datos fiscales */}
-      <div className="border border-border rounded-lg overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowFiscal((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-brand-surface/50 transition-colors text-left"
-        >
-          <span className="text-sm font-medium">Datos fiscales</span>
-          {showFiscal ? <ChevronDown size={15} className="text-muted-foreground" /> : <ChevronRight size={15} className="text-muted-foreground" />}
-        </button>
+      {/* Datos fiscales (opt-in) */}
+      <div className="border border-border rounded-lg p-5 space-y-4">
+        <div className="flex items-start gap-3">
+          <input
+            id="incluir_fiscal"
+            type="checkbox"
+            checked={incluirFiscal}
+            onChange={(e) => handleToggleFiscal(e.target.checked)}
+            className="w-4 h-4 mt-0.5 accent-brand-accent"
+          />
+          <div>
+            <Label htmlFor="incluir_fiscal" className="normal-case text-sm text-foreground">
+              Agregar datos fiscales
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Actívalo solo si este cliente requiere factura. Sin activar, no se guardará RFC, régimen ni uso de CFDI.
+            </p>
+          </div>
+        </div>
 
-        {showFiscal && (
-          <div className="px-5 pb-5 space-y-4 border-t border-border">
+        {incluirFiscal && (
+          <div className="space-y-4 pt-2 border-t border-border">
             <div className="grid grid-cols-2 gap-4 pt-4">
               <div className="space-y-1.5">
                 <Label htmlFor="rfc">RFC</Label>
@@ -188,6 +213,7 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
             <div className="space-y-1.5">
               <Label htmlFor="regimen_fiscal">Régimen fiscal</Label>
               <Select id="regimen_fiscal" {...register('regimen_fiscal')}>
+                <option value="">Selecciona un régimen...</option>
                 {REGIMENES.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
@@ -197,6 +223,7 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
             <div className="space-y-1.5">
               <Label htmlFor="uso_cfdi">Uso de CFDI</Label>
               <Select id="uso_cfdi" {...register('uso_cfdi')}>
+                <option value="">Selecciona un uso...</option>
                 {USOS_CFDI.map((u) => (
                   <option key={u.value} value={u.value}>{u.label}</option>
                 ))}
