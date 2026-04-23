@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Check, X, CornerDownLeft } from 'lucide-react'
+import { Check, Trash2 } from 'lucide-react'
 
 import { aprobarTicket } from '@/lib/actions/tickets'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ interface ApprovalActionsProps {
 export function ApprovalActions({ ticketId }: ApprovalActionsProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [dialogAction, setDialogAction] = useState<'rechazar' | 'devolver' | null>(null)
+  const [cancelOpen, setCancelOpen] = useState(false)
   const [motivo, setMotivo] = useState('')
 
   const handleAprobar = () => {
@@ -31,19 +31,18 @@ export function ApprovalActions({ ticketId }: ApprovalActionsProps) {
     })
   }
 
-  const handleDialogSubmit = () => {
-    if (!dialogAction) return
+  const handleCancelar = () => {
     startTransition(async () => {
       const result = await aprobarTicket({
         ticket_id: ticketId,
-        accion: dialogAction,
+        accion: 'rechazar',
         motivo: motivo || undefined,
       })
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success(dialogAction === 'rechazar' ? 'Ticket rechazado' : 'Ticket devuelto')
-        setDialogAction(null)
+        toast.success('Ticket cancelado')
+        setCancelOpen(false)
         setMotivo('')
         router.push('/admin/tickets')
       }
@@ -58,52 +57,47 @@ export function ApprovalActions({ ticketId }: ApprovalActionsProps) {
           Aprobar
         </Button>
         <Button
-          variant="outline"
-          onClick={() => setDialogAction('devolver')}
-          disabled={isPending}
-        >
-          <CornerDownLeft size={16} className="mr-1.5" />
-          Devolver
-        </Button>
-        <Button
           variant="destructive"
-          onClick={() => setDialogAction('rechazar')}
+          onClick={() => setCancelOpen(true)}
           disabled={isPending}
         >
-          <X size={16} className="mr-1.5" />
-          Rechazar
+          <Trash2 size={16} className="mr-1.5" />
+          Cancelar ticket
         </Button>
       </div>
 
       <Dialog
-        open={dialogAction !== null}
-        onClose={() => { setDialogAction(null); setMotivo('') }}
-        title={dialogAction === 'rechazar' ? 'Rechazar ticket' : 'Devolver ticket'}
+        open={cancelOpen}
+        onClose={() => { setCancelOpen(false); setMotivo('') }}
+        title="Cancelar ticket"
       >
         <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            El ticket quedará marcado como cancelado y no podrá procesarse.
+          </p>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground uppercase tracking-wide">
-              Motivo {dialogAction === 'devolver' && '(opcional)'}
+              Motivo (opcional)
             </label>
             <textarea
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               rows={3}
               className="w-full bg-white border border-border rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent transition-colors resize-none"
-              placeholder="Explica el motivo..."
+              placeholder="Motivo de cancelación..."
               autoFocus
             />
           </div>
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => { setDialogAction(null); setMotivo('') }}>
-              Cancelar
+            <Button variant="outline" onClick={() => { setCancelOpen(false); setMotivo('') }}>
+              Volver
             </Button>
             <Button
-              variant={dialogAction === 'rechazar' ? 'destructive' : 'default'}
-              onClick={handleDialogSubmit}
+              variant="destructive"
+              onClick={handleCancelar}
               disabled={isPending}
             >
-              {isPending ? 'Procesando...' : dialogAction === 'rechazar' ? 'Rechazar' : 'Devolver'}
+              {isPending ? 'Cancelando...' : 'Cancelar ticket'}
             </Button>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus, Check, X, CornerDownLeft, ExternalLink, Banknote, DollarSign, Trash2, Truck, RotateCcw, Timer } from 'lucide-react'
+import { Plus, Check, ExternalLink, Banknote, DollarSign, Trash2, Truck, RotateCcw, Timer } from 'lucide-react'
 import Link from 'next/link'
 
 import { createClient } from '@/lib/supabase/client'
@@ -120,7 +120,7 @@ function TicketTimer({ aprobadoAt }: { aprobadoAt: string | null }) {
 
 // ── Panel: Aprobación ──────────────────────────────────────
 function AprobacionPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch: () => void }) {
-  const [dialogAction, setDialogAction] = useState<{ ticketId: string; accion: 'rechazar' | 'devolver' } | null>(null)
+  const [cancelTicketId, setCancelTicketId] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -133,17 +133,17 @@ function AprobacionPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefet
     })
   }
 
-  const handleDialogSubmit = () => {
-    if (!dialogAction) return
+  const handleCancelar = () => {
+    if (!cancelTicketId) return
     startTransition(async () => {
       const result = await aprobarTicket({
-        ticket_id: dialogAction.ticketId,
-        accion: dialogAction.accion,
+        ticket_id: cancelTicketId,
+        accion: 'rechazar',
         motivo: motivo || undefined,
       })
       if (result.error) { toast.error(result.error); return }
-      toast.success(dialogAction.accion === 'rechazar' ? 'Ticket rechazado' : 'Ticket devuelto')
-      setDialogAction(null)
+      toast.success('Ticket cancelado')
+      setCancelTicketId(null)
       setMotivo('')
       onRefetch()
     })
@@ -177,13 +177,9 @@ function AprobacionPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefet
               <Button size="sm" onClick={() => handleAprobar(t.id)} disabled={isPending} className="h-7 text-xs">
                 <Check size={11} className="mr-1" />Aprobar
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setDialogAction({ ticketId: t.id, accion: 'devolver' })}
-                disabled={isPending} className="h-7 text-xs">
-                <CornerDownLeft size={11} className="mr-1" />Devolver
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setDialogAction({ ticketId: t.id, accion: 'rechazar' })}
+              <Button size="sm" variant="outline" onClick={() => setCancelTicketId(t.id)}
                 disabled={isPending} className="h-7 text-xs text-red-600 hover:text-red-700 border-red-200">
-                <X size={11} className="mr-1" />Rechazar
+                <Trash2 size={11} className="mr-1" />Cancelar ticket
               </Button>
             </div>
           </div>
@@ -191,23 +187,24 @@ function AprobacionPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefet
       </div>
 
       <Dialog
-        open={!!dialogAction}
-        onClose={() => { setDialogAction(null); setMotivo('') }}
-        title={dialogAction?.accion === 'rechazar' ? 'Rechazar ticket' : 'Devolver ticket'}
+        open={!!cancelTicketId}
+        onClose={() => { setCancelTicketId(null); setMotivo('') }}
+        title="Cancelar ticket"
       >
         <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">El ticket quedará marcado como cancelado y no podrá procesarse.</p>
           <textarea
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             rows={3}
-            placeholder={dialogAction?.accion === 'rechazar' ? 'Motivo del rechazo...' : 'Observaciones (opcional)...'}
+            placeholder="Motivo de cancelación (opcional)..."
             className="w-full border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent resize-none"
             autoFocus
           />
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => { setDialogAction(null); setMotivo('') }}>Cancelar</Button>
-            <Button onClick={handleDialogSubmit} disabled={isPending}>
-              {isPending ? 'Procesando...' : dialogAction?.accion === 'rechazar' ? 'Rechazar' : 'Devolver'}
+            <Button variant="outline" onClick={() => { setCancelTicketId(null); setMotivo('') }}>Volver</Button>
+            <Button onClick={handleCancelar} disabled={isPending} className="bg-red-600 hover:bg-red-700 text-white">
+              {isPending ? 'Cancelando...' : 'Cancelar ticket'}
             </Button>
           </div>
         </div>
