@@ -432,7 +432,11 @@ export async function cancelarTicket(ticketId: string, motivo?: string): Promise
   return {}
 }
 
-export async function entregarTicket(ticketId: string, tiempoSegundos?: number) {
+export async function entregarTicket(
+  ticketId: string,
+  tiempoSegundos?: number,
+  cobroPendiente?: boolean,
+) {
   const { profile, supabase } = await getAuthenticatedProfile()
   if (profile.rol !== 'admin') return { error: 'Solo administradores pueden entregar tickets' }
 
@@ -455,6 +459,7 @@ export async function entregarTicket(ticketId: string, tiempoSegundos?: number) 
       estado: 'despachado',
       despachado_at: new Date().toISOString(),
       tiempo_despacho_segundos: tiempoSegundos ?? null,
+      cobro_pendiente: cobroPendiente ?? false,
     })
     .eq('id', ticketId)
 

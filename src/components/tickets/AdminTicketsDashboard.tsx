@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus, Check, ExternalLink, Banknote, DollarSign, Trash2, Truck, RotateCcw, Timer } from 'lucide-react'
+import { Plus, Check, ExternalLink, DollarSign, Trash2, Truck, RotateCcw, Timer } from 'lucide-react'
 import Link from 'next/link'
 
 import { createClient } from '@/lib/supabase/client'
@@ -218,26 +218,19 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
   const [isPending, startTransition] = useTransition()
   const [cancelDialog, setCancelDialog] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
-  // Guardamos el tiempo actual del timer al momento de entregar
-  const [timerSegundos, setTimerSegundos] = useState<Map<string, number>>(new Map())
+  const [deliverDialog, setDeliverDialog] = useState<{ id: string; aprobadoAt: string | null } | null>(null)
 
-  const handleToggleCobro = (ticketId: string, current: boolean) => {
-    startTransition(async () => {
-      const result = await toggleCobroPendiente(ticketId, !current)
-      if (result.error) { toast.error(result.error); return }
-      toast.success(!current ? 'Marcado como cobro pendiente' : 'Cobro registrado')
-      onRefetch()
-    })
-  }
-
-  const handleEntregar = (ticketId: string, aprobadoAt: string | null) => {
+  const handleEntregar = (cobroPendiente: boolean) => {
+    if (!deliverDialog) return
+    const { id, aprobadoAt } = deliverDialog
     const segundos = aprobadoAt
       ? Math.floor((Date.now() - new Date(aprobadoAt).getTime()) / 1000)
       : undefined
     startTransition(async () => {
-      const result = await entregarTicket(ticketId, segundos)
+      const result = await entregarTicket(id, segundos, cobroPendiente)
       if (result.error) { toast.error(result.error); return }
-      toast.success('Pedido entregado')
+      toast.success(cobroPendiente ? 'Pedido entregado · pendiente de cobro' : 'Pedido entregado y cobrado')
+      setDeliverDialog(null)
       onRefetch()
     })
   }
@@ -305,7 +298,7 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
               {puedeEntregar(t.estado) && (
                 <button
                   type="button"
-                  onClick={() => handleEntregar(t.id, t.aprobado_at)}
+                  onClick={() => setDeliverDialog({ id: t.id, aprobadoAt: t.aprobado_at })}
                   disabled={isPending}
                   className="flex items-center gap-1 px-2 py-1 rounded text-xs text-green-700 border border-green-300 hover:bg-green-50 transition-colors disabled:opacity-50"
                 >
@@ -324,15 +317,6 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
                   Volver a checar
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => handleToggleCobro(t.id, t.cobro_pendiente)}
-                disabled={isPending}
-                title={t.cobro_pendiente ? 'Marcar como cobrado' : 'Marcar cobro pendiente'}
-                className={`p-1 rounded transition-colors ${t.cobro_pendiente ? 'text-orange-600 hover:text-orange-800' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <Banknote size={14} />
-              </button>
               <button
                 type="button"
                 onClick={() => setCancelDialog(t.id)}
@@ -366,6 +350,38 @@ function ProcesoPanel({ tickets, onRefetch }: { tickets: TicketRow[]; onRefetch:
             <Button variant="outline" onClick={() => { setCancelDialog(null); setMotivo('') }}>Volver</Button>
             <Button onClick={handleCancelar} disabled={isPending} className="bg-red-600 hover:bg-red-700 text-white">
               {isPending ? 'Cancelando...' : 'Cancelar ticket'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={!!deliverDialog}
+        onClose={() => setDeliverDialog(null)}
+        title="Entregar mercancía"
+      >
+        <div className="space-y-5">
+          <div>
+            <p className="text-sm font-medium">¿El cliente ya pagó este ticket?</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Si aún no paga, lo marcaremos como pendiente de cobro y aparecerá en la sección "Por cobrar".
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => handleEntregar(true)}
+              disabled={isPending}
+              className="border-orange-300 text-orange-700 hover:bg-orange-50"
+            >
+              No, cobrar después
+            </Button>
+            <Button
+              onClick={() => handleEntregar(false)}
+              disabled={isPending}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isPending ? 'Guardando...' : 'Sí, ya pagó'}
             </Button>
           </div>
         </div>
