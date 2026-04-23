@@ -14,11 +14,23 @@ import { CATEGORIAS_PRODUCTO } from '@/lib/validations/schemas'
 const COLUMN_MAP: Record<string, string> = {
   // Nombre / descripción
   nombre: 'nombre',
+  producto: 'nombre',
+  articulo: 'nombre',
+  artículo: 'nombre',
+  item: 'nombre',
+  nombre_producto: 'nombre',
+  nombre_del_producto: 'nombre',
   descripcion: 'descripcion',
   descripción: 'descripcion',
   // Categoría
   categoria: 'categoria',
   categoría: 'categoria',
+  tipo: 'categoria',
+  tipo_producto: 'categoria',
+  tipo_de_producto: 'categoria',
+  familia: 'categoria',
+  clasificacion: 'categoria',
+  clasificación: 'categoria',
   // Código de barras
   codigo_barras: 'codigo_barras',
   código_barras: 'codigo_barras',
@@ -67,6 +79,8 @@ const COLUMN_MAP: Record<string, string> = {
   vende_pieza: 'vende_pza',
   pieza: 'vende_pza',
   pza: 'vende_pza',
+  admite_menudeo: 'vende_pza',
+  admite_pieza: 'vende_pza',
   vende_kg: 'vende_kg',
   kg: 'vende_kg',
   vende_caja: 'vende_caja',
@@ -102,10 +116,12 @@ function parseRows(raw: Record<string, unknown>[]): Record<string, unknown>[] {
         out[field] = val === null || val === undefined ? '' : String(val).trim()
       }
     }
-    // Normalizar categoria
+    // Normalizar categoria — acepta singular/plural (Croqueta↔Croquetas, etc.)
     if (out.categoria) {
       const cat = String(out.categoria).trim()
-      const match = CATEGORIAS_PRODUCTO.find(c => c.toLowerCase() === cat.toLowerCase())
+      const norm = (s: string) => s.toLowerCase().trim().replace(/s$/, '')
+      const target = norm(cat)
+      const match = CATEGORIAS_PRODUCTO.find(c => norm(c) === target)
       out.categoria = match ?? 'Otros'
     }
     return out
