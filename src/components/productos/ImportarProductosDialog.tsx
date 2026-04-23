@@ -121,7 +121,7 @@ interface Props {
   onClose: () => void
 }
 
-type Resultado = { creados: number; errores: { fila: number; mensaje: string }[] }
+type Resultado = { creados: number; actualizados: number; errores: { fila: number; mensaje: string }[] }
 
 export function ImportarProductosDialog({ open, onClose }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -186,8 +186,12 @@ export function ImportarProductosDialog({ open, onClose }: Props) {
         return
       }
       setResultado(result.data!)
-      if (result.data!.creados > 0) {
-        toast.success(`${result.data!.creados} producto${result.data!.creados !== 1 ? 's' : ''} importado${result.data!.creados !== 1 ? 's' : ''}`)
+      const { creados, actualizados } = result.data!
+      if (creados > 0 || actualizados > 0) {
+        const partes = []
+        if (creados > 0) partes.push(`${creados} creado${creados !== 1 ? 's' : ''}`)
+        if (actualizados > 0) partes.push(`${actualizados} actualizado${actualizados !== 1 ? 's' : ''}`)
+        toast.success(partes.join(' · '))
       }
     } finally {
       setSubmitting(false)
@@ -305,9 +309,25 @@ export function ImportarProductosDialog({ open, onClose }: Props) {
         {/* Resultado */}
         {resultado && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 size={16} className="text-green-600" />
-              <span><strong>{resultado.creados}</strong> producto{resultado.creados !== 1 ? 's' : ''} importado{resultado.creados !== 1 ? 's' : ''} correctamente</span>
+            <div className="space-y-1 text-sm">
+              {resultado.creados > 0 && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-green-600" />
+                  <span><strong>{resultado.creados}</strong> producto{resultado.creados !== 1 ? 's' : ''} nuevo{resultado.creados !== 1 ? 's' : ''} creado{resultado.creados !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {resultado.actualizados > 0 && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-blue-600" />
+                  <span><strong>{resultado.actualizados}</strong> producto{resultado.actualizados !== 1 ? 's' : ''} existente{resultado.actualizados !== 1 ? 's' : ''} actualizado{resultado.actualizados !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {resultado.creados === 0 && resultado.actualizados === 0 && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <AlertCircle size={16} />
+                  <span>No se importó ningún producto</span>
+                </div>
+              )}
             </div>
             {resultado.errores.length > 0 && (
               <div className="border border-amber-200 rounded-lg p-3 space-y-1 max-h-36 overflow-auto">

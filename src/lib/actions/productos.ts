@@ -129,13 +129,40 @@ export async function importarProductos(rows: unknown[]) {
 
   const importSchema = productoSchema.omit({ stock_inicial: true, almacen_id_inicial: true })
 
+  // Cargar productos existentes para match por nombre (lowercase + collapse spaces).
+  const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ')
+  const { data: existentes } = await supabase
+    .from('productos')
+    .select('id, nombre')
+  const porNombre = new Map<string, string>()
+  for (const p of (existentes ?? []) as { id: string; nombre: string }[]) {
+    porNombre.set(normalize(p.nombre), p.id)
+  }
+
   let creados = 0
+  let actualizados = 0
   const errores: { fila: number; mensaje: string }[] = []
 
   for (let i = 0; i < rows.length; i++) {
     const parsed = importSchema.safeParse(rows[i])
     if (!parsed.success) {
       errores.push({ fila: i + 2, mensaje: parsed.error.issues[0].message })
+      continue
+    }
+
+    const existingId = porNombre.get(normalize(parsed.data.nombre))
+
+    if (existingId) {
+      const { error } = await supabase
+        .from('productos')
+        .update(parsed.data)
+        .eq('id', existingId)
+
+      if (error) {
+        errores.push({ fila: i + 2, mensaje: error.message })
+      } else {
+        actualizados++
+      }
       continue
     }
 
@@ -152,8 +179,9 @@ export async function importarProductos(rows: unknown[]) {
       intentos++
     }
 
+    const nuevoId = crypto.randomUUID()
     const { error } = await supabase.from('productos').insert({
-      id: crypto.randomUUID(),
+      id: nuevoId,
       sku,
       unidad_medida: 'pza',
       activo: true,
@@ -164,13 +192,14 @@ export async function importarProductos(rows: unknown[]) {
       errores.push({ fila: i + 2, mensaje: error.message })
     } else {
       creados++
+      porNombre.set(normalize(parsed.data.nombre), nuevoId)
     }
   }
 
   revalidatePath('/admin/productos')
   revalidatePath('/admin/inventario')
 
-  return { data: { creados, errores } }
+  return { data: { creados, actualizados, errores } }
 }
 
 export async function toggleProducto(id: string) {
