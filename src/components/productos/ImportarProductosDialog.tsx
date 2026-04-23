@@ -9,24 +9,72 @@ import { Dialog } from '@/components/ui/dialog'
 import { importarProductos } from '@/lib/actions/productos'
 import { CATEGORIAS_PRODUCTO } from '@/lib/validations/schemas'
 
-// Columnas esperadas → campo del schema
+// Columnas esperadas → campo del schema.
+// Se normaliza: toLower + trim + espacios→guión_bajo antes de buscar aquí.
 const COLUMN_MAP: Record<string, string> = {
+  // Nombre / descripción
   nombre: 'nombre',
   descripcion: 'descripcion',
+  descripción: 'descripcion',
+  // Categoría
   categoria: 'categoria',
+  categoría: 'categoria',
+  // Código de barras
   codigo_barras: 'codigo_barras',
-  precio_menudeo: 'precio_base',
+  código_barras: 'codigo_barras',
+  codigo: 'codigo_barras',
+  código: 'codigo_barras',
+  barras: 'codigo_barras',
+  ean: 'codigo_barras',
+  upc: 'codigo_barras',
+  // Precio menudeo (precio_base)
   precio_base: 'precio_base',
+  precio_menudeo: 'precio_base',
+  menudeo: 'precio_base',
+  precio: 'precio_base',
+  precio_venta: 'precio_base',
+  precio_publico: 'precio_base',
+  precio_público: 'precio_base',
+  p_menudeo: 'precio_base',
+  p._menudeo: 'precio_base',
+  precio_cliente: 'precio_base',
+  retail: 'precio_base',
+  venta: 'precio_base',
+  // Precio mayoreo (precio_mayoreo)
   precio_mayoreo: 'precio_mayoreo',
+  mayoreo: 'precio_mayoreo',
+  p_mayoreo: 'precio_mayoreo',
+  p._mayoreo: 'precio_mayoreo',
+  precio_dist: 'precio_mayoreo',
+  precio_distribuidor: 'precio_mayoreo',
+  distribuidor: 'precio_mayoreo',
+  wholesale: 'precio_mayoreo',
+  precio_costo_venta: 'precio_mayoreo',
+  // Costo
   costo: 'costo',
+  precio_costo: 'costo',
+  costo_unitario: 'costo',
+  // Impuestos
   tasa_iva: 'tasa_iva',
+  iva: 'tasa_iva',
   tasa_ieps: 'tasa_ieps',
+  ieps: 'tasa_ieps',
+  // Peso
   peso_kg: 'peso_kg',
+  peso: 'peso_kg',
+  // Unidades de venta
   vende_pza: 'vende_pza',
+  vende_pieza: 'vende_pza',
+  pieza: 'vende_pza',
+  pza: 'vende_pza',
   vende_kg: 'vende_kg',
+  kg: 'vende_kg',
   vende_caja: 'vende_caja',
+  caja: 'vende_caja',
   vende_bulto: 'vende_bulto',
+  bulto: 'vende_bulto',
   requiere_caducidad: 'requiere_caducidad',
+  caducidad: 'requiere_caducidad',
 }
 
 const BOOLEAN_FIELDS = new Set(['vende_pza', 'vende_kg', 'vende_caja', 'vende_bulto', 'requiere_caducidad'])
@@ -65,7 +113,8 @@ function parseRows(raw: Record<string, unknown>[]): Record<string, unknown>[] {
 }
 
 const TEMPLATE_URL = `data:text/csv;charset=utf-8,nombre,descripcion,categoria,codigo_barras,precio_menudeo,precio_mayoreo,costo,tasa_iva,tasa_ieps,peso_kg,vende_pza,vende_kg,vende_caja,vende_bulto,requiere_caducidad
-Ejemplo producto,Descripción opcional,Abarrotes,7501000000001,25.50,20.00,12.00,0.16,0,0.500,si,no,no,no,no`
+Ejemplo Producto,Descripción opcional,Abarrotes,7501000000001,25.50,20.00,12.00,0.16,0,0.500,si,no,no,no,no
+Croqueta Grande,Alimento perro adulto,Croquetas,7502000000002,185.00,160.00,90.00,0.16,0,2.000,si,no,no,si,no`
 
 interface Props {
   open: boolean
