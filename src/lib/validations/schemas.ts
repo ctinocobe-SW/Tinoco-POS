@@ -52,10 +52,13 @@ export const productoSchema = z.object({
 export const clienteSchema = z.object({
   nombre: z.string().min(1).max(200),
   razon_social: z.string().max(200).optional(),
-  rfc: z.string().max(13).optional(),
-  regimen_fiscal: z.string().optional(),
-  codigo_postal: z.string().length(5).optional(),
-  uso_cfdi: z.string().default('G03'),
+  rfc: z.string().max(13).optional().or(z.literal('')),
+  regimen_fiscal: z.string().optional().or(z.literal('')),
+  codigo_postal: z.string().optional().or(z.literal('')).refine(
+    (v) => !v || v.length === 5,
+    { message: 'El código postal debe tener 5 dígitos' },
+  ),
+  uso_cfdi: z.string().optional().or(z.literal('')),
   telefono: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   whatsapp: z.string().optional(),
