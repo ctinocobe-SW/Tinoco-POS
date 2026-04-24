@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { Search, Trash2, Plus } from 'lucide-react'
 
 import { crearTicketSchema } from '@/lib/validations/schemas'
-import type { CrearTicketInput } from '@/lib/validations/schemas'
+import type { CrearTicketInput, UnidadVenta } from '@/lib/validations/schemas'
 import { crearTicket, obtenerDespachadorSugerido } from '@/lib/actions/tickets'
 import { searchClientes } from '@/lib/queries/clientes'
 import { searchProductos } from '@/lib/queries/productos'
@@ -28,10 +28,65 @@ interface AdminCreateTicketDialogProps {
   almacenes: Almacen[]
 }
 
+interface UnidadOpcion {
+  unidad: UnidadVenta
+  precio: number
+  label: string
+}
+
 interface ItemMeta {
   sku: string
   nombre: string
-  precio_base: number
+  opciones: UnidadOpcion[]
+}
+
+const UNIDAD_LABEL: Record<UnidadVenta, string> = {
+  pza: 'pza',
+  kg: 'kg',
+  caja: 'caja',
+  bulto: 'bulto',
+}
+
+function construirOpciones(p: {
+  precio_base: number | string | null
+  precio_mayoreo: number | string | null
+  vende_pza: boolean
+  vende_kg: boolean
+  vende_caja: boolean
+  vende_bulto: boolean
+  unidad_precio_base: UnidadVenta | null
+  unidad_precio_mayoreo: UnidadVenta | null
+}): UnidadOpcion[] {
+  const vendePorUnidad: Record<UnidadVenta, boolean> = {
+    pza: p.vende_pza,
+    kg: p.vende_kg,
+    caja: p.vende_caja,
+    bulto: p.vende_bulto,
+  }
+  const opciones: UnidadOpcion[] = []
+
+  const base = Number(p.precio_base) || 0
+  if (base > 0 && p.unidad_precio_base && vendePorUnidad[p.unidad_precio_base]) {
+    opciones.push({
+      unidad: p.unidad_precio_base,
+      precio: base,
+      label: `${UNIDAD_LABEL[p.unidad_precio_base]} · menudeo`,
+    })
+  }
+
+  const mayoreo = Number(p.precio_mayoreo) || 0
+  if (mayoreo > 0 && p.unidad_precio_mayoreo && vendePorUnidad[p.unidad_precio_mayoreo]) {
+    const yaIncluida = opciones.some((o) => o.unidad === p.unidad_precio_mayoreo)
+    if (!yaIncluida) {
+      opciones.push({
+        unidad: p.unidad_precio_mayoreo,
+        precio: mayoreo,
+        label: `${UNIDAD_LABEL[p.unidad_precio_mayoreo]} · mayoreo`,
+      })
+    }
+  }
+
+  return opciones
 }
 
 const ALMACEN_DEFAULT_NOMBRE = 'El Mercader'
@@ -151,16 +206,23 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
   }
 
   const handleSelectProducto = (p: any) => {
+    const opciones = construirOpciones(p)
+    if (opciones.length === 0) {
+      toast.error('El producto no tiene precios o unidades configuradas')
+      return
+    }
     setItemsMeta((prev) => new Map(prev).set(p.id, {
       sku: p.sku,
       nombre: p.nombre,
-      precio_base: Number(p.precio_base),
+      opciones,
     }))
+    const primera = opciones[0]
     append({
       producto_id: p.id,
       cantidad: 1,
-      precio_unitario: Number(p.precio_base),
+      precio_unitario: primera.precio,
       descuento: 0,
+      unidad: primera.unidad,
     })
     setProductoQuery('')
     setProductoResults([])
@@ -320,6 +382,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
               <thead>
                 <tr className="border-b border-border text-xs text-muted-foreground uppercase tracking-wide">
                   <th className="px-4 py-2 text-left">Producto</th>
+                  <th className="px-4 py-2 text-left w-40">Unidad</th>
                   <th className="px-4 py-2 text-center w-20">Cant.</th>
                   <th className="px-4 py-2 text-center w-32">Precio unit.</th>
                   <th className="px-4 py-2 text-center w-28">Descuento</th>
@@ -330,6 +393,8 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
               <tbody>
                 {fields.map((field, index) => {
                   const meta = itemsMeta.get(watchedItems[index]?.producto_id ?? '')
+                  const opciones = meta?.opciones ?? []
+                  const unidadActual = watchedItems[index]?.unidad
                   const precio = Number(watchedItems[index]?.precio_unitario) || 0
                   const cantidad = Number(watchedItems[index]?.cantidad) || 0
                   const descuento = Number(watchedItems[index]?.descuento) || 0
@@ -343,6 +408,30 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                             <p className="text-xs text-muted-foreground font-mono">{meta.sku}</p>
                           </div>
                         ) : <span className="text-muted-foreground text-xs">—</span>}
+                      </td>
+                      <td className="px-4 py-2">
+                        {opciones.length > 1 ? (
+                          <select
+                            value={unidadActual ?? ''}
+                            onChange={(e) => {
+                              const seleccionada = opciones.find((o) => o.unidad === e.target.value)
+                              if (!seleccionada) return
+                              setValue(`items.${index}.unidad`, seleccionada.unidad)
+                              setValue(`items.${index}.precio_unitario`, seleccionada.precio)
+                            }}
+                            className="w-full bg-white border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                          >
+                            {opciones.map((o) => (
+                              <option key={o.unidad} value={o.unidad}>
+                                {o.label} — {formatMXN(o.precio)}
+                              </option>
+                            ))}
+                          </select>
+                        ) : opciones.length === 1 ? (
+                          <span className="text-xs text-muted-foreground">{opciones[0].label}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2">
                         <input type="number" step="0.001" min="0.001"

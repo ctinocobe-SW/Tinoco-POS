@@ -71,6 +71,7 @@ export async function crearTicket(input: CrearTicketInput) {
       precio_unitario: precio,
       descuento: item.descuento,
       subtotal: lineSubtotal,
+      unidad: item.unidad ?? null,
     })
   }
 

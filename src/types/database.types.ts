@@ -33,6 +33,7 @@ export type MetodoPagoCredito = 'efectivo' | 'transferencia' | 'cheque' | 'otro'
 export type FacturaEstado = 'pendiente' | 'timbrada' | 'cancelada' | 'error'
 export type WhatsappMensajeTipo = 'text' | 'image' | 'audio' | 'document' | 'location' | 'interactive'
 export type WhatsappMensajeEstado = 'nuevo' | 'procesando' | 'ticket_creado' | 'ignorado' | 'error'
+export type UnidadVenta = 'pza' | 'kg' | 'caja' | 'bulto'
 
 export interface Database {
   public: {
@@ -155,6 +156,7 @@ export interface Database {
           discrepancia_tipo: DiscrepanciaTipo | null
           discrepancia_nota: string | null
           foto_url: string | null
+          unidad: UnidadVenta | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['ticket_items']['Row'], 'created_at'>
@@ -176,6 +178,8 @@ export interface Database {
           vende_kg: boolean
           vende_caja: boolean
           vende_bulto: boolean
+          unidad_precio_base: UnidadVenta | null
+          unidad_precio_mayoreo: UnidadVenta | null
           tasa_iva: number
           tasa_ieps: number
           requiere_caducidad: boolean

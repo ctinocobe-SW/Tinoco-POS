@@ -1,10 +1,14 @@
 import { z } from 'zod'
 
+export const UNIDADES_VENTA = ['pza', 'kg', 'caja', 'bulto'] as const
+export type UnidadVenta = typeof UNIDADES_VENTA[number]
+
 export const ticketItemSchema = z.object({
   producto_id: z.string().uuid(),
   cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
   precio_unitario: z.number().nonnegative(),
   descuento: z.number().nonnegative().default(0),
+  unidad: z.enum(UNIDADES_VENTA).optional(),
 })
 
 export const crearTicketSchema = z.object({
@@ -42,6 +46,8 @@ export const productoSchema = z.object({
   vende_bulto: z.boolean().default(false),
   piezas_por_caja: z.number().positive().optional(),
   piezas_por_bulto: z.number().positive().optional(),
+  unidad_precio_base: z.enum(['pza', 'kg']).optional(),
+  unidad_precio_mayoreo: z.enum(UNIDADES_VENTA).optional(),
   requiere_caducidad: z.boolean().default(false),
   fecha_caducidad: z.string().optional(),
   codigo_barras: z.string().optional(),
