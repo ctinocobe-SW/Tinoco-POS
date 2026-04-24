@@ -58,6 +58,8 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
       vende_bulto: false,
       piezas_por_caja: undefined,
       piezas_por_bulto: undefined,
+      unidad_precio_base: undefined,
+      unidad_precio_mayoreo: undefined,
       requiere_caducidad: false,
       fecha_caducidad: undefined,
       stock_inicial: 0,
@@ -179,6 +181,15 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               {...register('precio_base', { valueAsNumber: true })}
               placeholder="0.00"
             />
+            <Select
+              id="unidad_precio_base"
+              {...register('unidad_precio_base')}
+              className="h-8 text-xs"
+            >
+              <option value="">Unidad del precio menudeo...</option>
+              <option value="pza">Por pieza</option>
+              <option value="kg">Por kilogramo</option>
+            </Select>
             {errors.precio_base && <p className="text-xs text-red-600">{errors.precio_base.message}</p>}
           </div>
 
@@ -192,6 +203,17 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               {...register('precio_mayoreo', { valueAsNumber: true })}
               placeholder="0.00"
             />
+            <Select
+              id="unidad_precio_mayoreo"
+              {...register('unidad_precio_mayoreo')}
+              className="h-8 text-xs"
+            >
+              <option value="">Unidad del precio mayoreo...</option>
+              <option value="pza">Por pieza</option>
+              <option value="kg">Por kilogramo</option>
+              <option value="caja">Por caja</option>
+              <option value="bulto">Por bulto</option>
+            </Select>
             {errors.precio_mayoreo && <p className="text-xs text-red-600">{errors.precio_mayoreo.message}</p>}
           </div>
 
