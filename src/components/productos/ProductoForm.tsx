@@ -112,6 +112,8 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
 
       toast.success(isEdit ? 'Producto actualizado' : 'Producto creado correctamente')
       router.push('/admin/productos')
+    } catch (err) {
+      toast.error('Error inesperado: ' + String(err))
     } finally {
       setSubmitting(false)
     }
