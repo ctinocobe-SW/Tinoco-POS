@@ -52,7 +52,7 @@ export const productoSchema = z.object({
   fecha_caducidad: z.string().optional(),
   codigo_barras: z.string().optional(),
   stock_inicial: z.number().nonnegative().default(0).optional(),
-  almacen_id_inicial: z.string().uuid().optional(),
+  almacen_id_inicial: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.string().uuid().optional()),
 })
 
 export const clienteSchema = z.object({
