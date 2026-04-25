@@ -29,7 +29,7 @@ export default async function ProductoDetailPage({ params }: PageProps) {
   const [{ data: producto }, { data: proveedores }, { data: ppRows }] = await Promise.all([
     supabase
       .from('productos')
-      .select('id, sku, nombre, descripcion, categoria, peso_kg, precio_base, precio_mayoreo, costo, tasa_iva, tasa_ieps, vende_pza, vende_kg, vende_caja, vende_bulto, piezas_por_caja, piezas_por_bulto, requiere_caducidad, fecha_caducidad, activo, created_at, updated_at')
+      .select('id, sku, nombre, descripcion, categoria, peso_kg, precio_base, precio_mayoreo, costo, tasa_iva, tasa_ieps, vende_pza, vende_kg, vende_caja, vende_bulto, piezas_por_caja, piezas_por_bulto, unidad_precio_base, unidad_precio_mayoreo, requiere_caducidad, fecha_caducidad, activo, created_at, updated_at')
       .eq('id', params.id)
       .single(),
     supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre', { ascending: true }),
@@ -103,6 +103,8 @@ export default async function ProductoDetailPage({ params }: PageProps) {
           vende_bulto: p.vende_bulto ?? false,
           piezas_por_caja: p.piezas_por_caja ? Number(p.piezas_por_caja) : undefined,
           piezas_por_bulto: p.piezas_por_bulto ? Number(p.piezas_por_bulto) : undefined,
+          unidad_precio_base: p.unidad_precio_base ?? undefined,
+          unidad_precio_mayoreo: p.unidad_precio_mayoreo ?? undefined,
           requiere_caducidad: p.requiere_caducidad,
           fecha_caducidad: p.fecha_caducidad ?? undefined,
         }}

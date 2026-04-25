@@ -117,8 +117,15 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
     }
   }
 
+  const onInvalid = (errs: Record<string, { message?: string }>) => {
+    const first = Object.entries(errs)[0]
+    if (!first) return
+    const [field, err] = first
+    toast.error(`${field}: ${err?.message ?? 'campo inválido'}`)
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6 max-w-2xl">
 
       {/* Identificación */}
       <div className="border border-border rounded-lg p-5 space-y-4">
