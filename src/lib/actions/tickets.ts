@@ -5,6 +5,62 @@ import { getAuthenticatedProfile } from './helpers'
 import { crearTicketSchema, aprobarTicketSchema } from '@/lib/validations/schemas'
 import type { CrearTicketInput } from '@/lib/validations/schemas'
 
+function calcularItemsConPrecios(
+  items: { producto_id: string; cantidad: number; precio_unitario: number; descuento: number; unidad?: string | null }[],
+  productosMap: Map<string, any>,
+  esAdmin: boolean,
+): { itemsCalculados: any[]; subtotal: number; descuentoTotal: number } {
+  let subtotal = 0
+  let descuentoTotal = 0
+  const itemsCalculados: any[] = []
+
+  for (const item of items) {
+    const prod = productosMap.get(item.producto_id)
+    if (!prod) throw new Error(`Producto ${item.producto_id} no encontrado`)
+
+    // Derivar precio según la unidad seleccionada
+    let precio: number
+    const base = Number(prod.precio_base) || 0
+    const mayoreo = Number(prod.precio_mayoreo) || 0
+    const unidadBase = prod.unidad_precio_base
+    const unidadMayoreo = prod.unidad_precio_mayoreo
+
+    if (item.unidad && item.unidad === unidadMayoreo && mayoreo > 0 && item.unidad !== unidadBase) {
+      // Unidad es exclusivamente de mayoreo
+      precio = mayoreo
+    } else if (item.unidad && item.unidad === unidadBase && base > 0) {
+      // Unidad es de menudeo (aunque también pueda ser mayoreo)
+      precio = base
+    } else if (item.unidad && item.unidad === unidadMayoreo && mayoreo > 0) {
+      // Misma unidad para ambos — si el cliente envió precio explícito y es el de mayoreo, usar ese;
+      // de lo contrario usar menudeo como default
+      precio = base > 0 ? base : mayoreo
+    } else if (base > 0) {
+      precio = base
+    } else {
+      precio = mayoreo
+    }
+
+    // Solo el admin puede sobrescribir con precio explícito (ej. al editar antes de aprobar)
+    if (esAdmin && item.precio_unitario > 0) precio = item.precio_unitario
+
+    const lineSubtotal = precio * item.cantidad - item.descuento
+    subtotal += lineSubtotal
+    descuentoTotal += item.descuento
+
+    itemsCalculados.push({
+      producto_id: item.producto_id,
+      cantidad: item.cantidad,
+      precio_unitario: precio,
+      descuento: item.descuento,
+      subtotal: lineSubtotal,
+      unidad: item.unidad ?? null,
+    })
+  }
+
+  return { itemsCalculados, subtotal, descuentoTotal }
+}
+
 export async function crearTicket(input: CrearTicketInput) {
   const { profile, supabase } = await getAuthenticatedProfile()
 
@@ -41,7 +97,7 @@ export async function crearTicket(input: CrearTicketInput) {
   const productoIds = items.map((i) => i.producto_id)
   const { data: productos, error: prodError } = await supabase
     .from('productos')
-    .select('id, precio_base')
+    .select('id, precio_base, precio_mayoreo, unidad_precio_base, unidad_precio_mayoreo')
     .in('id', productoIds)
 
   if (prodError || !productos) {
@@ -50,30 +106,13 @@ export async function crearTicket(input: CrearTicketInput) {
 
   const productosMap = new Map(productos.map((p: any) => [p.id, p]))
 
-  // Calcular totales — precio directo sin desglosar IVA
-  let subtotal = 0
-  let descuentoTotal = 0
-
-  const itemsCalculados = []
-  for (const item of items) {
-    const prod = productosMap.get(item.producto_id)
-    if (!prod) return { error: `Producto ${item.producto_id} no encontrado` }
-
-    const precio = item.precio_unitario > 0 ? item.precio_unitario : (prod as any).precio_base
-    const lineSubtotal = precio * item.cantidad - item.descuento
-
-    subtotal += lineSubtotal
-    descuentoTotal += item.descuento
-
-    itemsCalculados.push({
-      producto_id: item.producto_id,
-      cantidad: item.cantidad,
-      precio_unitario: precio,
-      descuento: item.descuento,
-      subtotal: lineSubtotal,
-      unidad: item.unidad ?? null,
-    })
+  let calcResult: ReturnType<typeof calcularItemsConPrecios>
+  try {
+    calcResult = calcularItemsConPrecios(items, productosMap, isAdmin)
+  } catch (e: any) {
+    return { error: e.message ?? 'Error al calcular precios' }
   }
+  const { itemsCalculados, subtotal, descuentoTotal } = calcResult
 
   const total = subtotal
 
@@ -533,4 +572,102 @@ export async function toggleCobroPendiente(ticketId: string, pendiente: boolean)
 
   revalidatePath('/admin/tickets')
   return { data: { cobro_pendiente: pendiente } }
+}
+
+export async function aprobarTicketConEdicion(
+  ticketId: string,
+  items: { producto_id: string; cantidad: number; precio_unitario: number; descuento: number; unidad?: string | null }[],
+) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (profile.rol !== 'admin') {
+    return { error: 'Solo administradores pueden aprobar tickets' }
+  }
+
+  if (!items || items.length === 0) {
+    return { error: 'El ticket debe tener al menos un producto' }
+  }
+
+  const { data: ticket, error: fetchError } = await supabase
+    .from('tickets')
+    .select('id, folio, estado')
+    .eq('id', ticketId)
+    .single()
+
+  if (fetchError || !ticket) {
+    return { error: 'Ticket no encontrado' }
+  }
+
+  if ((ticket as any).estado !== 'pendiente_aprobacion') {
+    return { error: 'El ticket no está pendiente de aprobación' }
+  }
+
+  // Obtener precios de todos los productos del ticket
+  const productoIds = items.map((i) => i.producto_id)
+  const { data: productos, error: prodError } = await supabase
+    .from('productos')
+    .select('id, precio_base, precio_mayoreo, unidad_precio_base, unidad_precio_mayoreo')
+    .in('id', productoIds)
+
+  if (prodError || !productos) {
+    return { error: 'Error al obtener productos' }
+  }
+
+  const productosMap = new Map((productos as any[]).map((p) => [p.id, p]))
+
+  let calcResult: ReturnType<typeof calcularItemsConPrecios>
+  try {
+    calcResult = calcularItemsConPrecios(items, productosMap, true)
+  } catch (e: any) {
+    return { error: e.message ?? 'Error al calcular precios' }
+  }
+  const { itemsCalculados, subtotal, descuentoTotal } = calcResult
+
+  // Reemplazar items del ticket
+  const { error: deleteError } = await supabase
+    .from('ticket_items')
+    .delete()
+    .eq('ticket_id', ticketId)
+
+  if (deleteError) {
+    return { error: 'Error al actualizar los productos del ticket' }
+  }
+
+  const newItems = itemsCalculados.map((item) => ({
+    id: crypto.randomUUID(),
+    ticket_id: ticketId,
+    ...item,
+    verificado: false,
+  }))
+
+  const { error: insertError } = await supabase
+    .from('ticket_items')
+    .insert(newItems)
+
+  if (insertError) {
+    return { error: 'Error al guardar los productos actualizados' }
+  }
+
+  // Aprobar ticket y actualizar totales
+  const { error: updateError } = await supabase
+    .from('tickets')
+    .update({
+      estado: 'aprobado',
+      subtotal,
+      descuento: descuentoTotal,
+      total: subtotal,
+      aprobado_por: profile.id,
+      aprobado_at: new Date().toISOString(),
+    })
+    .eq('id', ticketId)
+
+  if (updateError) {
+    return { error: updateError.message }
+  }
+
+  revalidatePath('/admin/tickets')
+  revalidatePath(`/admin/tickets/${ticketId}`)
+  revalidatePath('/despachador/tickets')
+
+  return { data: { folio: (ticket as any).folio } }
 }

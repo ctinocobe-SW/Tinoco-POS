@@ -8,6 +8,7 @@ import { Search, Trash2, Plus } from 'lucide-react'
 
 import { crearTicketSchema } from '@/lib/validations/schemas'
 import type { CrearTicketInput, UnidadVenta } from '@/lib/validations/schemas'
+import { construirOpciones, type UnidadOpcion } from '@/lib/utils/precio-producto'
 import { crearTicket, obtenerDespachadorSugerido } from '@/lib/actions/tickets'
 import { searchClientes } from '@/lib/queries/clientes'
 import { searchProductos } from '@/lib/queries/productos'
@@ -28,55 +29,10 @@ interface AdminCreateTicketDialogProps {
   almacenes: Almacen[]
 }
 
-interface UnidadOpcion {
-  unidad: UnidadVenta
-  precio: number
-  label: string
-}
-
 interface ItemMeta {
   sku: string
   nombre: string
   opciones: UnidadOpcion[]
-}
-
-const UNIDAD_LABEL: Record<UnidadVenta, string> = {
-  pza: 'pza',
-  kg: 'kg',
-  caja: 'caja',
-  bulto: 'bulto',
-}
-
-function construirOpciones(p: {
-  precio_base: number | string | null
-  precio_mayoreo: number | string | null
-  unidad_precio_base: UnidadVenta | null
-  unidad_precio_mayoreo: UnidadVenta | null
-}): UnidadOpcion[] {
-  const opciones: UnidadOpcion[] = []
-
-  const base = Number(p.precio_base) || 0
-  if (base > 0 && p.unidad_precio_base) {
-    opciones.push({
-      unidad: p.unidad_precio_base,
-      precio: base,
-      label: `${UNIDAD_LABEL[p.unidad_precio_base]} · menudeo`,
-    })
-  }
-
-  const mayoreo = Number(p.precio_mayoreo) || 0
-  if (mayoreo > 0 && p.unidad_precio_mayoreo) {
-    const yaIncluida = opciones.some((o) => o.unidad === p.unidad_precio_mayoreo)
-    if (!yaIncluida) {
-      opciones.push({
-        unidad: p.unidad_precio_mayoreo,
-        precio: mayoreo,
-        label: `${UNIDAD_LABEL[p.unidad_precio_mayoreo]} · mayoreo`,
-      })
-    }
-  }
-
-  return opciones
 }
 
 const ALMACEN_DEFAULT_NOMBRE = 'El Mercader'
@@ -402,9 +358,9 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                       <td className="px-4 py-2">
                         {opciones.length > 1 ? (
                           <select
-                            value={unidadActual ?? ''}
+                            value={opciones.find((o) => o.unidad === unidadActual && o.precio === precio)?.key ?? opciones[0]?.key ?? ''}
                             onChange={(e) => {
-                              const seleccionada = opciones.find((o) => o.unidad === e.target.value)
+                              const seleccionada = opciones.find((o) => o.key === e.target.value)
                               if (!seleccionada) return
                               setValue(`items.${index}.unidad`, seleccionada.unidad)
                               setValue(`items.${index}.precio_unitario`, seleccionada.precio)
@@ -412,7 +368,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                             className="w-full bg-white border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent"
                           >
                             {opciones.map((o) => (
-                              <option key={o.unidad} value={o.unidad}>
+                              <option key={o.key} value={o.key}>
                                 {o.label} — {formatMXN(o.precio)}
                               </option>
                             ))}

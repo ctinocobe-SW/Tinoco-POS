@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, CreditCard } from 'lucide-react'
 import { TicketStatusBadge } from '@/components/tickets/TicketStatusBadge'
 import { TicketItemsTable } from '@/components/tickets/TicketItemsTable'
-import { ApprovalActions } from '@/components/tickets/ApprovalActions'
+import { TicketItemsEditor } from '@/components/tickets/TicketItemsEditor'
 import { PagareTicketBlock } from '@/components/creditos/PagareTicketBlock'
 import { FacturarButton } from '@/components/tickets/FacturarButton'
 import { formatMXN, formatDateTime } from '@/lib/utils/format'
@@ -36,7 +36,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   const { data: items } = await supabase
     .from('ticket_items')
-    .select('id, cantidad, precio_unitario, descuento, subtotal, verificado, discrepancia_tipo, productos(sku, nombre)')
+    .select('id, producto_id, cantidad, precio_unitario, descuento, subtotal, unidad, verificado, discrepancia_tipo, productos(sku, nombre, precio_base, precio_mayoreo, unidad_precio_base, unidad_precio_mayoreo)')
     .eq('ticket_id', params.id)
 
   const itemsList = (items ?? []).map((i: any) => ({
@@ -49,6 +49,21 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
     discrepancia_tipo: i.discrepancia_tipo,
     producto_sku: i.productos?.sku,
     producto_nombre: i.productos?.nombre,
+  }))
+
+  const editorItems = (items ?? []).map((i: any) => ({
+    id: i.id,
+    producto_id: i.producto_id,
+    cantidad: Number(i.cantidad),
+    precio_unitario: Number(i.precio_unitario),
+    descuento: Number(i.descuento),
+    unidad: i.unidad ?? null,
+    producto_sku: i.productos?.sku ?? '—',
+    producto_nombre: i.productos?.nombre ?? '—',
+    precio_base: Number(i.productos?.precio_base) || 0,
+    precio_mayoreo: Number(i.productos?.precio_mayoreo) || 0,
+    unidad_precio_base: i.productos?.unidad_precio_base ?? null,
+    unidad_precio_mayoreo: i.productos?.unidad_precio_mayoreo ?? null,
   }))
 
   return (
@@ -92,37 +107,42 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       {/* Items */}
       <div className="border border-border rounded-lg p-4 mb-6">
         <h2 className="text-sm font-medium mb-3">Productos ({itemsList.length})</h2>
-        <TicketItemsTable items={itemsList} />
 
-        {/* Totales */}
-        <div className="flex justify-end mt-4 pt-4 border-t border-border">
-          <div className="w-64 space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatMXN(Number(t.subtotal))}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">IVA</span>
-              <span>{formatMXN(Number(t.iva))}</span>
-            </div>
-            {Number(t.ieps) > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">IEPS</span>
-                <span>{formatMXN(Number(t.ieps))}</span>
+        {t.estado === 'pendiente_aprobacion' ? (
+          <TicketItemsEditor ticketId={t.id} initialItems={editorItems} />
+        ) : (
+          <>
+            <TicketItemsTable items={itemsList} />
+            <div className="flex justify-end mt-4 pt-4 border-t border-border">
+              <div className="w-64 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatMXN(Number(t.subtotal))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">IVA</span>
+                  <span>{formatMXN(Number(t.iva))}</span>
+                </div>
+                {Number(t.ieps) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">IEPS</span>
+                    <span>{formatMXN(Number(t.ieps))}</span>
+                  </div>
+                )}
+                {Number(t.descuento) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Descuento</span>
+                    <span>-{formatMXN(Number(t.descuento))}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-semibold border-t border-border pt-1">
+                  <span>Total</span>
+                  <span>{formatMXN(Number(t.total))}</span>
+                </div>
               </div>
-            )}
-            {Number(t.descuento) > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Descuento</span>
-                <span>-{formatMXN(Number(t.descuento))}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-semibold border-t border-border pt-1">
-              <span>Total</span>
-              <span>{formatMXN(Number(t.total))}</span>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Notas */}
@@ -138,13 +158,6 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         <div className="border border-red-200 bg-red-50 rounded-lg p-4 mb-6">
           <p className="text-xs text-red-600 uppercase tracking-wide mb-1">Motivo de rechazo</p>
           <p className="text-sm">{t.motivo_rechazo}</p>
-        </div>
-      )}
-
-      {/* Acciones */}
-      {t.estado === 'pendiente_aprobacion' && (
-        <div className="border-t border-border pt-6">
-          <ApprovalActions ticketId={t.id} />
         </div>
       )}
 

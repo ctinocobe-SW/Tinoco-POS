@@ -7,11 +7,12 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Search, Plus, Trash2 } from 'lucide-react'
 
-import { crearTicketSchema, type CrearTicketInput } from '@/lib/validations/schemas'
+import { crearTicketSchema, type CrearTicketInput, type UnidadVenta } from '@/lib/validations/schemas'
 import { searchClientes } from '@/lib/queries/clientes'
 import { searchProductos } from '@/lib/queries/productos'
 import { crearTicket } from '@/lib/actions/tickets'
 import { formatMXN } from '@/lib/utils/format'
+import { construirOpciones, type UnidadOpcion } from '@/lib/utils/precio-producto'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,7 +20,20 @@ import { Label } from '@/components/ui/label'
 
 type ClienteResult = { id: string; nombre: string; rfc: string | null }
 type ProductoResult = {
-  id: string; sku: string; nombre: string; precio_base: number; peso_kg: number
+  id: string
+  sku: string
+  nombre: string
+  precio_base: number
+  precio_mayoreo: number
+  unidad_precio_base: UnidadVenta | null
+  unidad_precio_mayoreo: UnidadVenta | null
+  peso_kg: number
+}
+
+interface ItemMeta {
+  sku: string
+  nombre: string
+  opciones: UnidadOpcion[]
 }
 
 export function TicketForm() {
@@ -37,8 +51,8 @@ export function TicketForm() {
   const [productoResults, setProductoResults] = useState<ProductoResult[]>([])
   const [showProductoDropdown, setShowProductoDropdown] = useState(false)
 
-  // Producto metadata (para mostrar nombre/sku en la tabla)
-  const [productosMeta, setProductosMeta] = useState<Map<string, ProductoResult>>(new Map())
+  // Producto metadata (nombre/sku/opciones por producto_id)
+  const [productosMeta, setProductosMeta] = useState<Map<string, ItemMeta>>(new Map())
 
   const form = useForm<CrearTicketInput>({
     resolver: zodResolver(crearTicketSchema),
@@ -83,30 +97,41 @@ export function TicketForm() {
       return
     }
     const results = await searchProductos(query)
-    setProductoResults(results)
+    setProductoResults(results as ProductoResult[])
     setShowProductoDropdown(results.length > 0)
   }, [])
 
   const addProducto = (producto: ProductoResult) => {
-    // Evitar duplicados
     const existing = form.getValues('items')
     if (existing.some((i) => i.producto_id === producto.id)) {
       toast.error('Producto ya agregado')
       return
     }
 
-    setProductosMeta((prev) => new Map(prev).set(producto.id, producto))
+    const opciones = construirOpciones(producto)
+    if (opciones.length === 0) {
+      toast.error('El producto no tiene precios o unidades configuradas')
+      return
+    }
+
+    const primera = opciones[0]
+    setProductosMeta((prev) => new Map(prev).set(producto.id, {
+      sku: producto.sku,
+      nombre: producto.nombre,
+      opciones,
+    }))
     append({
       producto_id: producto.id,
       cantidad: 1,
-      precio_unitario: Number(producto.precio_base),
+      precio_unitario: primera.precio,
       descuento: 0,
+      unidad: primera.unidad,
     })
     setProductoQuery('')
     setShowProductoDropdown(false)
   }
 
-  // Calcular total — precio directo sin IVA
+  // Calcular total
   const watchItems = form.watch('items')
   let total = 0
   watchItems.forEach((item) => {
@@ -181,23 +206,27 @@ export function TicketForm() {
           />
           {showProductoDropdown && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-              {productoResults.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface transition-colors flex items-center justify-between"
-                  onClick={() => addProducto(p)}
-                >
-                  <div>
-                    <span className="font-medium">{p.nombre}</span>
-                    <span className="text-muted-foreground ml-2">{p.sku}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>{formatMXN(Number(p.precio_base))}</span>
-                    <Plus size={14} className="text-brand-accent" />
-                  </div>
-                </button>
-              ))}
+              {productoResults.map((p) => {
+                const opciones = construirOpciones(p)
+                const precioPreview = opciones[0]?.precio ?? 0
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface transition-colors flex items-center justify-between"
+                    onClick={() => addProducto(p)}
+                  >
+                    <div>
+                      <span className="font-medium">{p.nombre}</span>
+                      <span className="text-muted-foreground ml-2">{p.sku}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>{formatMXN(precioPreview)}</span>
+                      <Plus size={14} className="text-brand-accent" />
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -207,75 +236,97 @@ export function TicketForm() {
       {fields.length > 0 && (
         <div className="border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-brand-surface text-muted-foreground">
-                <th className="text-left px-3 py-2 font-medium">Producto</th>
-                <th className="text-right px-3 py-2 font-medium w-24">Cant.</th>
-                <th className="text-right px-3 py-2 font-medium w-32">Precio</th>
-                <th className="text-right px-3 py-2 font-medium w-28">Desc.</th>
-                <th className="text-right px-3 py-2 font-medium w-32">Subtotal</th>
-                <th className="px-3 py-2 w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {fields.map((field, index) => {
-                const meta = productosMeta.get(field.producto_id)
-                const qty = form.watch(`items.${index}.cantidad`) ?? 0
-                const price = form.watch(`items.${index}.precio_unitario`) ?? 0
-                const disc = form.watch(`items.${index}.descuento`) ?? 0
-                const lineSub = price * qty - disc
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-brand-surface text-muted-foreground">
+                  <th className="text-left px-3 py-2 font-medium">Producto</th>
+                  <th className="text-left px-3 py-2 font-medium w-36">Unidad</th>
+                  <th className="text-right px-3 py-2 font-medium w-24">Cant.</th>
+                  <th className="text-right px-3 py-2 font-medium w-32">Precio unit.</th>
+                  <th className="text-right px-3 py-2 font-medium w-28">Desc.</th>
+                  <th className="text-right px-3 py-2 font-medium w-32">Subtotal</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {fields.map((field, index) => {
+                  const meta = productosMeta.get(field.producto_id)
+                  const opciones = meta?.opciones ?? []
+                  const unidadActual = watchItems[index]?.unidad
+                  const precio = watchItems[index]?.precio_unitario ?? 0
+                  const qty = watchItems[index]?.cantidad ?? 0
+                  const disc = watchItems[index]?.descuento ?? 0
+                  const lineSub = precio * qty - disc
 
-                return (
-                  <tr key={field.id} className="border-t border-border/50">
-                    <td className="px-3 py-2">
-                      <div className="font-medium">{meta?.nombre ?? '—'}</div>
-                      <div className="text-xs text-muted-foreground">{meta?.sku}</div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={0.01}
-                        step="any"
-                        {...form.register(`items.${index}.cantidad`, { valueAsNumber: true })}
-                        className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        {...form.register(`items.${index}.precio_unitario`, { valueAsNumber: true })}
-                        className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        {...form.register(`items.${index}.descuento`, { valueAsNumber: true })}
-                        className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium">
-                      {formatMXN(lineSub)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={() => remove(index)}
-                        className="text-muted-foreground hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={field.id} className="border-t border-border/50">
+                      <td className="px-3 py-2">
+                        <div className="font-medium">{meta?.nombre ?? '—'}</div>
+                        <div className="text-xs text-muted-foreground">{meta?.sku}</div>
+                      </td>
+                      <td className="px-3 py-2">
+                        {opciones.length > 1 ? (
+                          <select
+                            value={opciones.find((o) => o.unidad === unidadActual && o.precio === precio)?.key ?? opciones[0]?.key ?? ''}
+                            onChange={(e) => {
+                              const seleccionada = opciones.find((o) => o.key === e.target.value)
+                              if (!seleccionada) return
+                              form.setValue(`items.${index}.unidad`, seleccionada.unidad)
+                              form.setValue(`items.${index}.precio_unitario`, seleccionada.precio)
+                            }}
+                            className="w-full bg-white border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                          >
+                            {opciones.map((o) => (
+                              <option key={o.key} value={o.key}>
+                                {o.label} — {formatMXN(o.precio)}
+                              </option>
+                            ))}
+                          </select>
+                        ) : opciones.length === 1 ? (
+                          <span className="text-xs text-muted-foreground">{opciones[0].label}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          min={0.001}
+                          step="any"
+                          {...form.register(`items.${index}.cantidad`, { valueAsNumber: true })}
+                          className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                        />
+                      </td>
+                      {/* Precio: solo lectura para el despachador */}
+                      <td className="px-3 py-2 text-right font-medium tabular-nums">
+                        {formatMXN(precio)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          {...form.register(`items.${index}.descuento`, { valueAsNumber: true })}
+                          className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium">
+                        {formatMXN(lineSub)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => remove(index)}
+                          className="text-muted-foreground hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -309,7 +360,7 @@ export function TicketForm() {
 
       {/* Submit */}
       <div className="flex gap-3">
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || fields.length === 0 || !selectedCliente}>
           {submitting ? 'Creando...' : 'Crear ticket'}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
