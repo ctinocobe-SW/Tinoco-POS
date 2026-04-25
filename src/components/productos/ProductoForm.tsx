@@ -83,6 +83,8 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
   const requiereCaducidad = watch('requiere_caducidad')
   const tasaIva = watch('tasa_iva') ?? 0.16
   const tasaIeps = watch('tasa_ieps') ?? 0
+  const precioBase = Number(watch('precio_base')) || 0
+  const precioMayoreo = Number(watch('precio_mayoreo')) || 0
 
   const toggleProveedor = (id: string) => {
     setProveedoresSeleccionados((prev) =>
@@ -181,15 +183,17 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               {...register('precio_base', { valueAsNumber: true })}
               placeholder="0.00"
             />
-            <Select
-              id="unidad_precio_base"
-              {...register('unidad_precio_base')}
-              className="h-8 text-xs"
-            >
-              <option value="">Unidad del precio menudeo...</option>
-              <option value="pza">Por pieza</option>
-              <option value="kg">Por kilogramo</option>
-            </Select>
+            {precioBase > 0 && (
+              <Select
+                id="unidad_precio_base"
+                {...register('unidad_precio_base')}
+                className="h-8 text-xs"
+              >
+                <option value="">Unidad del precio menudeo...</option>
+                <option value="pza">Por pieza</option>
+                <option value="kg">Por kilogramo</option>
+              </Select>
+            )}
             {errors.precio_base && <p className="text-xs text-red-600">{errors.precio_base.message}</p>}
           </div>
 
@@ -203,17 +207,19 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               {...register('precio_mayoreo', { valueAsNumber: true })}
               placeholder="0.00"
             />
-            <Select
-              id="unidad_precio_mayoreo"
-              {...register('unidad_precio_mayoreo')}
-              className="h-8 text-xs"
-            >
-              <option value="">Unidad del precio mayoreo...</option>
-              <option value="pza">Por pieza</option>
-              <option value="kg">Por kilogramo</option>
-              <option value="caja">Por caja</option>
-              <option value="bulto">Por bulto</option>
-            </Select>
+            {precioMayoreo > 0 && (
+              <Select
+                id="unidad_precio_mayoreo"
+                {...register('unidad_precio_mayoreo')}
+                className="h-8 text-xs"
+              >
+                <option value="">Unidad del precio mayoreo...</option>
+                <option value="pza">Por pieza</option>
+                <option value="kg">Por kilogramo</option>
+                <option value="caja">Por caja</option>
+                <option value="bulto">Por bulto</option>
+              </Select>
+            )}
             {errors.precio_mayoreo && <p className="text-xs text-red-600">{errors.precio_mayoreo.message}</p>}
           </div>
 
