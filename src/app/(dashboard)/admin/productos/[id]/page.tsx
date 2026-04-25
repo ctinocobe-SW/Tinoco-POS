@@ -66,10 +66,20 @@ export default async function ProductoDetailPage({ params }: PageProps) {
       </div>
 
       {/* Info rápida */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="border border-border rounded-lg p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Precio base</p>
-          <p className="text-xl font-semibold mt-1">{formatMXN(Number(p.precio_base))}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Precio menudeo</p>
+          <p className="text-xl font-semibold mt-1">
+            {Number(p.precio_base) > 0 ? formatMXN(Number(p.precio_base)) : <span className="text-muted-foreground text-base">—</span>}
+          </p>
+          {p.unidad_precio_base && <p className="text-xs text-muted-foreground mt-0.5">por {p.unidad_precio_base}</p>}
+        </div>
+        <div className="border border-border rounded-lg p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Precio mayoreo</p>
+          <p className="text-xl font-semibold mt-1">
+            {Number(p.precio_mayoreo) > 0 ? formatMXN(Number(p.precio_mayoreo)) : <span className="text-muted-foreground text-base">—</span>}
+          </p>
+          {p.unidad_precio_mayoreo && <p className="text-xs text-muted-foreground mt-0.5">por {p.unidad_precio_mayoreo}</p>}
         </div>
         <div className="border border-border rounded-lg p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Costo</p>
