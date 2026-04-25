@@ -81,22 +81,22 @@ export default async function ProductosPage({ searchParams }: PageProps) {
 
       {/* Lista */}
       {lista.length > 0 ? (
-        <div className="space-y-2">
-          {/* Encabezado */}
-          <div className="flex items-center justify-between px-4 py-1 text-xs text-muted-foreground uppercase tracking-wide">
-            <div className="flex items-center gap-4">
-              <span className="w-16">SKU</span>
-              <span>Nombre</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="w-28 text-right">Menudeo</span>
-              <span className="w-28 text-right">Mayoreo</span>
-              <span className="w-16">Estado</span>
+        <div className="border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px]">
+              {/* Encabezado */}
+              <div className="grid grid-cols-[90px_minmax(220px,1fr)_140px_140px_100px] items-center gap-4 px-4 py-2.5 border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
+                <span>SKU</span>
+                <span>Nombre</span>
+                <span className="text-right">Menudeo</span>
+                <span className="text-right">Mayoreo</span>
+                <span className="text-center">Estado</span>
+              </div>
+              {lista.map((p) => (
+                <ProductoCard key={p.id} producto={p} />
+              ))}
             </div>
           </div>
-          {lista.map((p) => (
-            <ProductoCard key={p.id} producto={p} />
-          ))}
         </div>
       ) : (
         <div className="text-center py-12 text-muted-foreground">

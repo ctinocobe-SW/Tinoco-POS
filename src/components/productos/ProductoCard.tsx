@@ -26,43 +26,36 @@ export function ProductoCard({ producto }: ProductoCardProps) {
   return (
     <Link
       href={`/admin/productos/${producto.id}`}
-      className="flex items-center justify-between border border-border rounded-lg px-4 py-3 hover:bg-brand-surface transition-colors"
+      className="grid grid-cols-[90px_minmax(220px,1fr)_140px_140px_100px] items-center gap-4 px-4 py-3 border-b border-border last:border-0 hover:bg-brand-surface/50 transition-colors"
     >
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="w-16 shrink-0">
-          <span className="text-xs font-mono text-muted-foreground">{producto.sku}</span>
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{producto.nombre}</p>
-          {producto.categoria && (
-            <p className="text-xs text-muted-foreground">{producto.categoria}</p>
+      <span className="text-xs font-mono text-muted-foreground truncate">{producto.sku}</span>
+      <div className="min-w-0">
+        <p className="text-sm font-medium truncate">{producto.nombre}</p>
+        {producto.categoria && (
+          <p className="text-xs text-muted-foreground truncate">{producto.categoria}</p>
+        )}
+      </div>
+      {base > 0 ? (
+        <div className="text-right">
+          <p className="text-sm font-medium tabular-nums">{formatMXN(base)}</p>
+          {producto.unidad_precio_base && (
+            <p className="text-xs text-muted-foreground">{producto.unidad_precio_base}</p>
           )}
         </div>
-      </div>
-      <div className="flex items-center gap-4 shrink-0 ml-4">
-        {base > 0 ? (
-          <div className="text-right w-28">
-            <p className="text-sm font-medium">{formatMXN(base)}</p>
-            <p className="text-xs text-muted-foreground">
-              menudeo{producto.unidad_precio_base ? ` · ${producto.unidad_precio_base}` : ''}
-            </p>
-          </div>
-        ) : (
-          <div className="w-28" />
-        )}
-        {mayoreo > 0 ? (
-          <div className="text-right w-28">
-            <p className="text-sm font-medium">{formatMXN(mayoreo)}</p>
-            <p className="text-xs text-muted-foreground">
-              mayoreo{producto.unidad_precio_mayoreo ? ` · ${producto.unidad_precio_mayoreo}` : ''}
-            </p>
-          </div>
-        ) : (
-          <div className="w-28" />
-        )}
-        {base === 0 && mayoreo === 0 && (
-          <span className="text-sm text-muted-foreground">Sin precio</span>
-        )}
+      ) : (
+        <span className="text-sm text-muted-foreground text-right">—</span>
+      )}
+      {mayoreo > 0 ? (
+        <div className="text-right">
+          <p className="text-sm font-medium tabular-nums">{formatMXN(mayoreo)}</p>
+          {producto.unidad_precio_mayoreo && (
+            <p className="text-xs text-muted-foreground">{producto.unidad_precio_mayoreo}</p>
+          )}
+        </div>
+      ) : (
+        <span className="text-sm text-muted-foreground text-right">—</span>
+      )}
+      <div className="flex justify-center">
         <Badge variant={producto.activo ? 'success' : 'warning'}>
           {producto.activo ? 'Activo' : 'Inactivo'}
         </Badge>
