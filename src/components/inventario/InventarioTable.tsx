@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { AjusteDialog } from './AjusteDialog'
+import { ToggleControlaInventarioButton } from './ToggleControlaInventarioButton'
 
 interface StockEntry {
   inventario_id: string
@@ -19,6 +20,7 @@ interface ProductoRow {
   producto_sku: string
   producto_nombre: string
   producto_categoria: string
+  controla_inventario: boolean
   stock_total: number
   stock_entries: StockEntry[]
 }
@@ -40,12 +42,15 @@ interface InventarioTableProps {
 
 export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
   const [filtroAlmacen, setFiltroAlmacen] = useState<string>('todos')
+  const [soloControlados, setSoloControlados] = useState(false)
   const [ajusteTarget, setAjusteTarget] = useState<AjusteTarget | null>(null)
   const [ajusteAlmacenes, setAjusteAlmacenes] = useState<{ id: string; nombre: string }[]>([])
+  const [controlOverrides, setControlOverrides] = useState<Map<string, boolean>>(new Map())
 
   // Construir vista según filtro
   const tableRows = useMemo(() => {
     return rows.map((p) => {
+      const controla = controlOverrides.get(p.producto_id) ?? p.controla_inventario
       if (filtroAlmacen === 'todos') {
         // Mostrar stock total
         return {
@@ -53,6 +58,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
           producto_sku: p.producto_sku,
           producto_nombre: p.producto_nombre,
           producto_categoria: p.producto_categoria,
+          controla_inventario: controla,
           stock: p.stock_total,
           stock_minimo: Math.min(...p.stock_entries.map((e) => e.stock_minimo), Infinity) === Infinity ? 0 : Math.min(...p.stock_entries.map((e) => e.stock_minimo)),
           almacen_nombre: p.stock_entries.length > 1
@@ -70,6 +76,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
           producto_sku: p.producto_sku,
           producto_nombre: p.producto_nombre,
           producto_categoria: p.producto_categoria,
+          controla_inventario: controla,
           stock: entry?.stock_actual ?? 0,
           stock_minimo: entry?.stock_minimo ?? 0,
           almacen_nombre: almacen?.nombre ?? '',
@@ -78,10 +85,12 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
         }
       }
     })
-  }, [rows, filtroAlmacen, almacenes])
+  }, [rows, filtroAlmacen, almacenes, controlOverrides])
 
-  const bajosMinimo = tableRows.filter((r) => r.stock_minimo > 0 && r.stock < r.stock_minimo).length
-  const sinStock = tableRows.filter((r) => !r.tiene_stock).length
+  const visibleRows = soloControlados ? tableRows.filter((r) => r.controla_inventario) : tableRows
+
+  const bajosMinimo = visibleRows.filter((r) => r.controla_inventario && r.stock_minimo > 0 && r.stock < r.stock_minimo).length
+  const sinStock = visibleRows.filter((r) => r.controla_inventario && !r.tiene_stock).length
 
   const handleAjustar = (row: typeof tableRows[0]) => {
     if (filtroAlmacen !== 'todos' || row.ajuste_entry) {
@@ -116,7 +125,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
   return (
     <>
       {/* Filtros */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <label className="text-sm text-muted-foreground">Almacén:</label>
           <Select value={filtroAlmacen} onChange={(e) => setFiltroAlmacen(e.target.value)} className="w-48">
@@ -126,6 +135,15 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
             ))}
           </Select>
         </div>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={soloControlados}
+            onChange={(e) => setSoloControlados(e.target.checked)}
+            className="w-4 h-4 accent-brand-accent"
+          />
+          Solo con control activo
+        </label>
         {bajosMinimo > 0 && (
           <span className="flex items-center gap-1 text-amber-600 text-sm">
             <AlertTriangle size={13} />
@@ -145,16 +163,18 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
               <th className="px-4 py-2.5 text-left">Producto</th>
               <th className="px-4 py-2.5 text-left w-28">Categoría</th>
               {filtroAlmacen === 'todos' && <th className="px-4 py-2.5 text-left">Almacén(es)</th>}
+              <th className="px-4 py-2.5 text-center w-24">Control</th>
               <th className="px-4 py-2.5 text-right w-28">Stock</th>
               <th className="px-4 py-2.5 text-center w-24">Estado</th>
               <th className="px-4 py-2.5 w-24"></th>
             </tr>
           </thead>
           <tbody>
-            {tableRows.map((row) => {
-              const bajo = row.stock_minimo > 0 && row.stock < row.stock_minimo
+            {visibleRows.map((row) => {
+              const controla = row.controla_inventario
+              const bajo = controla && row.stock_minimo > 0 && row.stock < row.stock_minimo
               return (
-                <tr key={row.producto_id} className={`border-b border-border last:border-0 hover:bg-brand-surface/50 ${!row.tiene_stock ? 'opacity-60' : ''}`}>
+                <tr key={row.producto_id} className={`border-b border-border last:border-0 hover:bg-brand-surface/50 ${!controla ? 'opacity-60' : !row.tiene_stock ? 'opacity-60' : ''}`}>
                   <td className="px-4 py-3">
                     <p className="font-medium">{row.producto_nombre}</p>
                     <p className="text-xs text-muted-foreground font-mono">{row.producto_sku}</p>
@@ -163,13 +183,30 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
                   {filtroAlmacen === 'todos' && (
                     <td className="px-4 py-3 text-sm text-muted-foreground">{row.almacen_nombre}</td>
                   )}
+                  <td className="px-4 py-3 text-center">
+                    <ToggleControlaInventarioButton
+                      productoId={row.producto_id}
+                      controla={controla}
+                      onChange={(nuevo) => {
+                        setControlOverrides((prev) => {
+                          const next = new Map(prev)
+                          next.set(row.producto_id, nuevo)
+                          return next
+                        })
+                      }}
+                    />
+                  </td>
                   <td className={`px-4 py-3 text-right font-mono font-medium tabular-nums ${bajo ? 'text-red-600' : !row.tiene_stock ? 'text-muted-foreground' : ''}`}>
                     {row.tiene_stock
                       ? (row.stock % 1 === 0 ? row.stock : row.stock.toFixed(3).replace(/0+$/, ''))
                       : '—'}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {!row.tiene_stock ? (
+                    {!controla ? (
+                      <span className="inline-flex text-xs text-muted-foreground bg-brand-surface border border-border rounded-full px-2 py-0.5">
+                        Sin control
+                      </span>
+                    ) : !row.tiene_stock ? (
                       <span className="inline-flex text-xs text-muted-foreground bg-brand-surface border border-border rounded-full px-2 py-0.5">
                         Sin stock
                       </span>

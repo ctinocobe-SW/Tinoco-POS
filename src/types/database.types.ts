@@ -185,6 +185,7 @@ export interface Database {
           requiere_caducidad: boolean
           codigo_barras: string | null
           activo: boolean
+          controla_inventario: boolean
           created_at: string
           updated_at: string
         }

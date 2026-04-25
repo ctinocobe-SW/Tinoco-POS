@@ -22,7 +22,7 @@ export default async function InventarioPage() {
   // Todos los productos activos
   const { data: productos } = await supabase
     .from('productos')
-    .select('id, sku, nombre, categoria')
+    .select('id, sku, nombre, categoria, controla_inventario')
     .eq('activo', true)
     .order('nombre', { ascending: true })
 
@@ -54,6 +54,7 @@ export default async function InventarioPage() {
     producto_sku: string
     producto_nombre: string
     producto_categoria: string
+    controla_inventario: boolean
     stock_total: number
     stock_entries: StockEntry[]
   }
@@ -65,6 +66,7 @@ export default async function InventarioPage() {
       producto_sku: p.sku ?? '',
       producto_nombre: p.nombre,
       producto_categoria: p.categoria ?? 'Otros',
+      controla_inventario: !!p.controla_inventario,
       stock_total: 0,
       stock_entries: [],
     })
@@ -87,8 +89,10 @@ export default async function InventarioPage() {
   const rows = Array.from(productoMap.values())
 
   const totalProductos = rows.length
-  const sinStock = rows.filter((r) => r.stock_total === 0).length
+  const controlados = rows.filter((r) => r.controla_inventario).length
+  const sinStock = rows.filter((r) => r.controla_inventario && r.stock_total === 0).length
   const bajosMinimo = rows.filter((r) =>
+    r.controla_inventario &&
     r.stock_entries.some((e) => e.stock_actual < e.stock_minimo && e.stock_minimo > 0)
   ).length
 
@@ -99,6 +103,7 @@ export default async function InventarioPage() {
           <h1 className="text-2xl font-heading font-semibold">Inventario</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {totalProductos} producto{totalProductos !== 1 ? 's' : ''}
+            {' · '}{controlados} con control
             {sinStock > 0 && ` · ${sinStock} sin stock`}
             {bajosMinimo > 0 && ` · ${bajosMinimo} bajo mínimo`}
           </p>

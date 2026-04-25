@@ -233,3 +233,37 @@ export async function toggleProducto(id: string) {
 
   return { data: { activo: !(producto as any).activo } }
 }
+
+export async function toggleControlaInventario(id: string) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (profile.rol !== 'admin') {
+    return { error: 'Solo administradores pueden modificar productos' }
+  }
+
+  const { data: producto, error: fetchError } = await supabase
+    .from('productos')
+    .select('controla_inventario')
+    .eq('id', id)
+    .single()
+
+  if (fetchError || !producto) {
+    return { error: 'Producto no encontrado' }
+  }
+
+  const nuevoValor = !(producto as any).controla_inventario
+
+  const { error } = await supabase
+    .from('productos')
+    .update({ controla_inventario: nuevoValor })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/inventario')
+  revalidatePath('/admin/productos')
+
+  return { data: { controla_inventario: nuevoValor } }
+}
