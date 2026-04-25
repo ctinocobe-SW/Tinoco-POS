@@ -83,6 +83,8 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
   const requiereCaducidad = watch('requiere_caducidad')
   const tasaIva = watch('tasa_iva') ?? 0.16
   const tasaIeps = watch('tasa_ieps') ?? 0
+  const precioBase = Number(watch('precio_base')) || 0
+  const precioMayoreo = Number(watch('precio_mayoreo')) || 0
 
   const toggleProveedor = (id: string) => {
     setProveedoresSeleccionados((prev) =>
@@ -110,13 +112,22 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
 
       toast.success(isEdit ? 'Producto actualizado' : 'Producto creado correctamente')
       router.push('/admin/productos')
+    } catch (err) {
+      toast.error('Error inesperado: ' + String(err))
     } finally {
       setSubmitting(false)
     }
   }
 
+  const onInvalid = (errs: Record<string, { message?: string }>) => {
+    const first = Object.entries(errs)[0]
+    if (!first) return
+    const [field, err] = first
+    toast.error(`${field}: ${err?.message ?? 'campo inválido'}`)
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6 max-w-2xl">
 
       {/* Identificación */}
       <div className="border border-border rounded-lg p-5 space-y-4">
@@ -181,15 +192,17 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               {...register('precio_base', { valueAsNumber: true })}
               placeholder="0.00"
             />
-            <Select
-              id="unidad_precio_base"
-              {...register('unidad_precio_base')}
-              className="h-8 text-xs"
-            >
-              <option value="">Unidad del precio menudeo...</option>
-              <option value="pza">Por pieza</option>
-              <option value="kg">Por kilogramo</option>
-            </Select>
+            {precioBase > 0 && (
+              <Select
+                id="unidad_precio_base"
+                {...register('unidad_precio_base')}
+                className="h-8 text-xs"
+              >
+                <option value="">Unidad del precio menudeo...</option>
+                <option value="pza">Por pieza</option>
+                <option value="kg">Por kilogramo</option>
+              </Select>
+            )}
             {errors.precio_base && <p className="text-xs text-red-600">{errors.precio_base.message}</p>}
           </div>
 
@@ -203,17 +216,19 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               {...register('precio_mayoreo', { valueAsNumber: true })}
               placeholder="0.00"
             />
-            <Select
-              id="unidad_precio_mayoreo"
-              {...register('unidad_precio_mayoreo')}
-              className="h-8 text-xs"
-            >
-              <option value="">Unidad del precio mayoreo...</option>
-              <option value="pza">Por pieza</option>
-              <option value="kg">Por kilogramo</option>
-              <option value="caja">Por caja</option>
-              <option value="bulto">Por bulto</option>
-            </Select>
+            {precioMayoreo > 0 && (
+              <Select
+                id="unidad_precio_mayoreo"
+                {...register('unidad_precio_mayoreo')}
+                className="h-8 text-xs"
+              >
+                <option value="">Unidad del precio mayoreo...</option>
+                <option value="pza">Por pieza</option>
+                <option value="kg">Por kilogramo</option>
+                <option value="caja">Por caja</option>
+                <option value="bulto">Por bulto</option>
+              </Select>
+            )}
             {errors.precio_mayoreo && <p className="text-xs text-red-600">{errors.precio_mayoreo.message}</p>}
           </div>
 

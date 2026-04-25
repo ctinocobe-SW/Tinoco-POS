@@ -50,23 +50,13 @@ const UNIDAD_LABEL: Record<UnidadVenta, string> = {
 function construirOpciones(p: {
   precio_base: number | string | null
   precio_mayoreo: number | string | null
-  vende_pza: boolean
-  vende_kg: boolean
-  vende_caja: boolean
-  vende_bulto: boolean
   unidad_precio_base: UnidadVenta | null
   unidad_precio_mayoreo: UnidadVenta | null
 }): UnidadOpcion[] {
-  const vendePorUnidad: Record<UnidadVenta, boolean> = {
-    pza: p.vende_pza,
-    kg: p.vende_kg,
-    caja: p.vende_caja,
-    bulto: p.vende_bulto,
-  }
   const opciones: UnidadOpcion[] = []
 
   const base = Number(p.precio_base) || 0
-  if (base > 0 && p.unidad_precio_base && vendePorUnidad[p.unidad_precio_base]) {
+  if (base > 0 && p.unidad_precio_base) {
     opciones.push({
       unidad: p.unidad_precio_base,
       precio: base,
@@ -75,7 +65,7 @@ function construirOpciones(p: {
   }
 
   const mayoreo = Number(p.precio_mayoreo) || 0
-  if (mayoreo > 0 && p.unidad_precio_mayoreo && vendePorUnidad[p.unidad_precio_mayoreo]) {
+  if (mayoreo > 0 && p.unidad_precio_mayoreo) {
     const yaIncluida = opciones.some((o) => o.unidad === p.unidad_precio_mayoreo)
     if (!yaIncluida) {
       opciones.push({
