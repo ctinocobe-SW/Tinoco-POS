@@ -29,7 +29,7 @@ export default async function ProductosPage({ searchParams }: PageProps) {
 
   let query = supabase
     .from('productos')
-    .select('id, sku, nombre, categoria, unidad_medida, precio_base, activo')
+    .select('id, sku, nombre, categoria, unidad_medida, precio_base, precio_mayoreo, activo')
     .order('nombre', { ascending: true })
 
   if (q.length >= 2) {
@@ -45,6 +45,7 @@ export default async function ProductosPage({ searchParams }: PageProps) {
     categoria: string | null
     unidad_medida: string
     precio_base: number
+    precio_mayoreo: number
     activo: boolean
   }[]
 

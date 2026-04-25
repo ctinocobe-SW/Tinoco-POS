@@ -12,11 +12,20 @@ interface ProductoCardProps {
     categoria: string | null
     unidad_medida: string
     precio_base: number
+    precio_mayoreo: number
     activo: boolean
   }
 }
 
 export function ProductoCard({ producto }: ProductoCardProps) {
+  const base = Number(producto.precio_base)
+  const mayoreo = Number(producto.precio_mayoreo)
+  const precioDisplay = base > 0
+    ? { valor: base, label: 'menudeo' }
+    : mayoreo > 0
+      ? { valor: mayoreo, label: 'mayoreo' }
+      : null
+
   return (
     <Link
       href={`/admin/productos/${producto.id}`}
@@ -35,7 +44,14 @@ export function ProductoCard({ producto }: ProductoCardProps) {
       </div>
       <div className="flex items-center gap-4 shrink-0 ml-4">
         <span className="text-xs text-muted-foreground">{producto.unidad_medida}</span>
-        <span className="text-sm font-medium w-24 text-right">{formatMXN(Number(producto.precio_base))}</span>
+        {precioDisplay ? (
+          <div className="text-right w-24">
+            <p className="text-sm font-medium">{formatMXN(precioDisplay.valor)}</p>
+            <p className="text-xs text-muted-foreground">{precioDisplay.label}</p>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground w-24 text-right">Sin precio</span>
+        )}
         <Badge variant={producto.activo ? 'success' : 'warning'}>
           {producto.activo ? 'Activo' : 'Inactivo'}
         </Badge>

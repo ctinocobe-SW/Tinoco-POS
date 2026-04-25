@@ -358,7 +358,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                       className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface flex items-center gap-3">
                       <span className="font-mono text-xs text-muted-foreground">{p.sku}</span>
                       <span className="font-medium">{p.nombre}</span>
-                      <span className="ml-auto text-xs text-muted-foreground">{formatMXN(Number(p.precio_base))}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">{formatMXN(Number(p.precio_base) > 0 ? Number(p.precio_base) : Number(p.precio_mayoreo))}</span>
                     </button>
                   ))}
                 </div>
