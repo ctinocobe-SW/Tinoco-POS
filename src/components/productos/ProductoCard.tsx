@@ -13,6 +13,8 @@ interface ProductoCardProps {
     unidad_medida: string
     precio_base: number
     precio_mayoreo: number
+    unidad_precio_base: string | null
+    unidad_precio_mayoreo: string | null
     activo: boolean
   }
 }
@@ -20,11 +22,6 @@ interface ProductoCardProps {
 export function ProductoCard({ producto }: ProductoCardProps) {
   const base = Number(producto.precio_base)
   const mayoreo = Number(producto.precio_mayoreo)
-  const precioDisplay = base > 0
-    ? { valor: base, label: 'menudeo' }
-    : mayoreo > 0
-      ? { valor: mayoreo, label: 'mayoreo' }
-      : null
 
   return (
     <Link
@@ -43,14 +40,28 @@ export function ProductoCard({ producto }: ProductoCardProps) {
         </div>
       </div>
       <div className="flex items-center gap-4 shrink-0 ml-4">
-        <span className="text-xs text-muted-foreground">{producto.unidad_medida}</span>
-        {precioDisplay ? (
-          <div className="text-right w-24">
-            <p className="text-sm font-medium">{formatMXN(precioDisplay.valor)}</p>
-            <p className="text-xs text-muted-foreground">{precioDisplay.label}</p>
+        {base > 0 ? (
+          <div className="text-right w-28">
+            <p className="text-sm font-medium">{formatMXN(base)}</p>
+            <p className="text-xs text-muted-foreground">
+              menudeo{producto.unidad_precio_base ? ` · ${producto.unidad_precio_base}` : ''}
+            </p>
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground w-24 text-right">Sin precio</span>
+          <div className="w-28" />
+        )}
+        {mayoreo > 0 ? (
+          <div className="text-right w-28">
+            <p className="text-sm font-medium">{formatMXN(mayoreo)}</p>
+            <p className="text-xs text-muted-foreground">
+              mayoreo{producto.unidad_precio_mayoreo ? ` · ${producto.unidad_precio_mayoreo}` : ''}
+            </p>
+          </div>
+        ) : (
+          <div className="w-28" />
+        )}
+        {base === 0 && mayoreo === 0 && (
+          <span className="text-sm text-muted-foreground">Sin precio</span>
         )}
         <Badge variant={producto.activo ? 'success' : 'warning'}>
           {producto.activo ? 'Activo' : 'Inactivo'}

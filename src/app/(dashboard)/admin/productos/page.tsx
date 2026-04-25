@@ -29,7 +29,7 @@ export default async function ProductosPage({ searchParams }: PageProps) {
 
   let query = supabase
     .from('productos')
-    .select('id, sku, nombre, categoria, unidad_medida, precio_base, precio_mayoreo, activo')
+    .select('id, sku, nombre, categoria, unidad_medida, precio_base, precio_mayoreo, unidad_precio_base, unidad_precio_mayoreo, activo')
     .order('nombre', { ascending: true })
 
   if (q.length >= 2) {
@@ -46,6 +46,8 @@ export default async function ProductosPage({ searchParams }: PageProps) {
     unidad_medida: string
     precio_base: number
     precio_mayoreo: number
+    unidad_precio_base: string | null
+    unidad_precio_mayoreo: string | null
     activo: boolean
   }[]
 
@@ -87,8 +89,8 @@ export default async function ProductosPage({ searchParams }: PageProps) {
               <span>Nombre</span>
             </div>
             <div className="flex items-center gap-4">
-              <span>Unidad</span>
-              <span className="w-24 text-right">Precio</span>
+              <span className="w-28 text-right">Menudeo</span>
+              <span className="w-28 text-right">Mayoreo</span>
               <span className="w-16">Estado</span>
             </div>
           </div>
