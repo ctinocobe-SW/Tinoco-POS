@@ -385,6 +385,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                       </td>
                       <td className="px-4 py-2">
                         <input type="number" step="0.1" min="0.1" onWheel={blurOnWheel}
+                          value={cantidad || ''}
                           {...register(`items.${index}.cantidad`, { valueAsNumber: true })}
                           className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent" />
                       </td>

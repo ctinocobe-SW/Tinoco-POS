@@ -302,6 +302,7 @@ export function TicketForm() {
                           min={0.1}
                           step="0.1"
                           onWheel={blurOnWheel}
+                          value={qty || ''}
                           {...form.register(`items.${index}.cantidad`, { valueAsNumber: true })}
                           className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                         />
