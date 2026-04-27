@@ -9,7 +9,8 @@ export async function searchProductos(query: string) {
     .from('productos')
     .select(
       'id, sku, nombre, precio_base, precio_mayoreo, tasa_iva, tasa_ieps, peso_kg, requiere_caducidad,' +
-      'vende_pza, vende_kg, vende_caja, vende_bulto, unidad_precio_base, unidad_precio_mayoreo'
+      'vende_pza, vende_kg, vende_caja, vende_bulto, unidad_precio_base, unidad_precio_mayoreo,' +
+      'piezas_por_caja, piezas_por_bulto'
     )
     .eq('activo', true)
     .or(`nombre.ilike.%${query}%,sku.ilike.%${query}%`)
@@ -32,5 +33,7 @@ export async function searchProductos(query: string) {
     vende_bulto: boolean
     unidad_precio_base: UnidadVenta | null
     unidad_precio_mayoreo: UnidadVenta | null
+    piezas_por_caja: number | null
+    piezas_por_bulto: number | null
   }[]
 }

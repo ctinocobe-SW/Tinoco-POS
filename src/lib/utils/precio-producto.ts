@@ -6,6 +6,7 @@ export interface UnidadOpcion {
   tipo: 'menudeo' | 'mayoreo'
   label: string
   key: string // unidad-tipo, unique per option
+  cantidad_default?: number // auto-fill cuando el precio mayoreo es por pza/kg
 }
 
 const UNIDAD_LABEL: Record<UnidadVenta, string> = {
@@ -20,6 +21,10 @@ export function construirOpciones(p: {
   precio_mayoreo: number | string | null
   unidad_precio_base: string | null
   unidad_precio_mayoreo: string | null
+  piezas_por_caja?: number | null
+  piezas_por_bulto?: number | null
+  vende_caja?: boolean | null
+  vende_bulto?: boolean | null
 }): UnidadOpcion[] {
   const opciones: UnidadOpcion[] = []
 
@@ -43,12 +48,19 @@ export function construirOpciones(p: {
       (o) => o.unidad === unidad && o.precio === mayoreo && o.tipo === 'menudeo'
     )
     if (!yaIncluida) {
+      let cantidad_default: number | undefined
+      if (unidad === 'pza' || unidad === 'kg') {
+        const pCaja = p.vende_caja && Number(p.piezas_por_caja) > 0 ? Number(p.piezas_por_caja) : 0
+        const pBulto = p.vende_bulto && Number(p.piezas_por_bulto) > 0 ? Number(p.piezas_por_bulto) : 0
+        cantidad_default = pCaja || pBulto || undefined
+      }
       opciones.push({
         unidad,
         precio: mayoreo,
         tipo: 'mayoreo',
         label: `${UNIDAD_LABEL[unidad]} · mayoreo`,
         key: `${unidad}-mayoreo`,
+        cantidad_default,
       })
     }
   }

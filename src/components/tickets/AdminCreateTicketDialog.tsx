@@ -166,7 +166,7 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
     const primera = opciones[0]
     append({
       producto_id: p.id,
-      cantidad: 1,
+      cantidad: primera.cantidad_default ?? 1,
       precio_unitario: primera.precio,
       descuento: 0,
       unidad: primera.unidad,
@@ -365,6 +365,9 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                               if (!seleccionada) return
                               setValue(`items.${index}.unidad`, seleccionada.unidad)
                               setValue(`items.${index}.precio_unitario`, seleccionada.precio)
+                              if (seleccionada.cantidad_default !== undefined) {
+                                setValue(`items.${index}.cantidad`, seleccionada.cantidad_default)
+                              }
                             }}
                             className="w-full bg-white border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent"
                           >

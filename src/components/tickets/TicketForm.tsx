@@ -29,6 +29,10 @@ type ProductoResult = {
   unidad_precio_base: UnidadVenta | null
   unidad_precio_mayoreo: UnidadVenta | null
   peso_kg: number
+  piezas_por_caja: number | null
+  piezas_por_bulto: number | null
+  vende_caja: boolean
+  vende_bulto: boolean
 }
 
 interface ItemMeta {
@@ -123,7 +127,7 @@ export function TicketForm() {
     }))
     append({
       producto_id: producto.id,
-      cantidad: 1,
+      cantidad: primera.cantidad_default ?? 1,
       precio_unitario: primera.precio,
       descuento: 0,
       unidad: primera.unidad,
@@ -274,6 +278,9 @@ export function TicketForm() {
                               if (!seleccionada) return
                               form.setValue(`items.${index}.unidad`, seleccionada.unidad)
                               form.setValue(`items.${index}.precio_unitario`, seleccionada.precio)
+                              if (seleccionada.cantidad_default !== undefined) {
+                                form.setValue(`items.${index}.cantidad`, seleccionada.cantidad_default)
+                              }
                             }}
                             className="w-full bg-white border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent"
                           >
