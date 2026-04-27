@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils/cn'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 
 interface Almacen { id: string; nombre: string }
 interface ProveedorOption { id: string; nombre: string }
@@ -189,6 +190,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               type="number"
               step="0.01"
               min="0"
+              onWheel={blurOnWheel}
               {...register('precio_base', { valueAsNumber: true })}
               placeholder="0.00"
             />
@@ -213,6 +215,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               type="number"
               step="0.01"
               min="0"
+              onWheel={blurOnWheel}
               {...register('precio_mayoreo', { valueAsNumber: true })}
               placeholder="0.00"
             />
@@ -239,6 +242,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               type="number"
               step="0.01"
               min="0"
+              onWheel={blurOnWheel}
               {...register('costo', { valueAsNumber: true })}
               placeholder="0.00"
             />
@@ -341,8 +345,9 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
                   <Label className="text-xs text-muted-foreground">Piezas / kg por caja</Label>
                   <Input
                     type="number"
-                    step="0.001"
-                    min="0.001"
+                    step="0.1"
+                    min="0.1"
+                    onWheel={blurOnWheel}
                     {...register('piezas_por_caja', { valueAsNumber: true })}
                     placeholder="0"
                     className="h-8 text-sm"
@@ -365,8 +370,9 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
                   <Label className="text-xs text-muted-foreground">Piezas / kg por bulto</Label>
                   <Input
                     type="number"
-                    step="0.001"
-                    min="0.001"
+                    step="0.1"
+                    min="0.1"
+                    onWheel={blurOnWheel}
                     {...register('piezas_por_bulto', { valueAsNumber: true })}
                     placeholder="0"
                     className="h-8 text-sm"
@@ -390,6 +396,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
             type="number"
             step="0.001"
             min="0"
+            onWheel={blurOnWheel}
             {...register('peso_kg', { valueAsNumber: true })}
             placeholder="0.000"
             className="max-w-xs"
@@ -433,8 +440,9 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               <Input
                 id="stock_inicial"
                 type="number"
-                step="0.001"
+                step="0.1"
                 min="0"
+                onWheel={blurOnWheel}
                 {...register('stock_inicial', { valueAsNumber: true })}
                 placeholder="0"
               />

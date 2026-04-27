@@ -12,6 +12,7 @@ import { searchClientes } from '@/lib/queries/clientes'
 import { searchProductos } from '@/lib/queries/productos'
 import { crearTicket } from '@/lib/actions/tickets'
 import { formatMXN } from '@/lib/utils/format'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 import { construirOpciones, type UnidadOpcion } from '@/lib/utils/precio-producto'
 
 import { Button } from '@/components/ui/button'
@@ -291,8 +292,9 @@ export function TicketForm() {
                       <td className="px-3 py-2">
                         <input
                           type="number"
-                          min={0.001}
-                          step="any"
+                          min={0.1}
+                          step="0.1"
+                          onWheel={blurOnWheel}
                           {...form.register(`items.${index}.cantidad`, { valueAsNumber: true })}
                           className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                         />
@@ -305,7 +307,8 @@ export function TicketForm() {
                         <input
                           type="number"
                           min={0}
-                          step="any"
+                          step="0.01"
+                          onWheel={blurOnWheel}
                           {...form.register(`items.${index}.descuento`, { valueAsNumber: true })}
                           className="w-full text-right bg-transparent border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                         />

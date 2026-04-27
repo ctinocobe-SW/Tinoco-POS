@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { searchProductos } from '@/lib/queries/productos'
 import { getAlmacenes } from '@/lib/queries/almacenes'
 import { crearListaAlmacen } from '@/lib/actions/listasAlmacen'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 
 interface ListaItem {
   producto_id: string
@@ -217,7 +218,7 @@ export function ListaAlmacenDialog({ open, onClose }: ListaAlmacenDialogProps) {
                       <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
                     </td>
                     <td className="px-3 py-2">
-                      <input type="number" step="0.001" min="0.001"
+                      <input type="number" step="0.1" min="0.1" onWheel={blurOnWheel}
                         value={item.cantidad}
                         onChange={(e) => updateCantidad(item.producto_id, e.target.value)}
                         className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent" />

@@ -12,6 +12,7 @@ import type { CrearRecepcionInput } from '@/lib/validations/schemas'
 import { crearRecepcion } from '@/lib/actions/recepciones'
 import { searchProveedores } from '@/lib/queries/proveedores'
 import { searchProductos } from '@/lib/queries/productos'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -309,8 +310,9 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
                     <td className="px-4 py-2">
                       <input
                         type="number"
-                        step="0.001"
+                        step="0.1"
                         min="0"
+                        onWheel={blurOnWheel}
                         {...register(`items.${index}.cantidad_esperada`, { valueAsNumber: true })}
                         placeholder="—"
                         className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
@@ -319,8 +321,9 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
                     <td className="px-4 py-2">
                       <input
                         type="number"
-                        step="0.001"
-                        min="0.001"
+                        step="0.1"
+                        min="0.1"
+                        onWheel={blurOnWheel}
                         {...register(`items.${index}.cantidad_recibida`, { valueAsNumber: true })}
                         className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                       />

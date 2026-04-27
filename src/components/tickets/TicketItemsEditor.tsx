@@ -6,6 +6,7 @@ import { Trash2, Check } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { formatMXN } from '@/lib/utils/format'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 import { construirOpciones, type UnidadOpcion } from '@/lib/utils/precio-producto'
 import { aprobarTicketConEdicion } from '@/lib/actions/tickets'
 import { aprobarTicket } from '@/lib/actions/tickets'
@@ -141,10 +142,11 @@ export function TicketItemsEditor({ ticketId, initialItems }: TicketItemsEditorP
                   <td className="py-2">
                     <input
                       type="number"
-                      min={0.001}
-                      step="any"
+                      min={0.1}
+                      step="0.1"
+                      onWheel={blurOnWheel}
                       value={item.cantidad}
-                      onChange={(e) => updateItem(item.id, { cantidad: Math.max(0.001, Number(e.target.value) || 0.001) })}
+                      onChange={(e) => updateItem(item.id, { cantidad: Math.max(0.1, Number(e.target.value) || 0.1) })}
                       className="w-full text-right bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                     />
                   </td>
@@ -153,6 +155,7 @@ export function TicketItemsEditor({ ticketId, initialItems }: TicketItemsEditorP
                       type="number"
                       min={0}
                       step="0.01"
+                      onWheel={blurOnWheel}
                       value={item.precio_unitario}
                       onChange={(e) => updateItem(item.id, { precio_unitario: Math.max(0, Number(e.target.value) || 0) })}
                       className="w-full text-right bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
@@ -163,6 +166,7 @@ export function TicketItemsEditor({ ticketId, initialItems }: TicketItemsEditorP
                       type="number"
                       min={0}
                       step="0.01"
+                      onWheel={blurOnWheel}
                       value={item.descuento}
                       onChange={(e) => updateItem(item.id, { descuento: Math.max(0, Number(e.target.value) || 0) })}
                       className="w-full text-right bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"

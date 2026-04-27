@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { registrarAbono } from '@/lib/actions/creditos'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 import type { MetodoPagoCredito } from '@/types/database.types'
 
 interface AbonoDialogProps {
@@ -77,6 +78,7 @@ export function AbonoDialog({ open, onClose, creditoId, saldoActual }: AbonoDial
                 step="0.01"
                 min="0.01"
                 max={saldoActual}
+                onWheel={blurOnWheel}
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
                 className="pl-6"

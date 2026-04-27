@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { clienteSchema } from '@/lib/validations/schemas'
 import type { ClienteInput } from '@/lib/validations/schemas'
 import { crearCliente, actualizarCliente } from '@/lib/actions/clientes'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -257,6 +258,7 @@ export function ClienteForm({ clienteId, defaultValues }: ClienteFormProps) {
               type="number"
               step="0.01"
               min="0"
+              onWheel={blurOnWheel}
               {...register('limite_credito', { valueAsNumber: true })}
               placeholder="0.00"
             />

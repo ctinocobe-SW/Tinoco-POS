@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { ajustarInventario } from '@/lib/actions/inventario'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 import type { AjusteInventarioInput } from '@/lib/validations/schemas'
 
 interface AjusteDialogProps {
@@ -137,8 +138,9 @@ export function AjusteDialog({ open, onClose, item, almacenesDisponibles = [] }:
           <Input
             id="cantidad"
             type="number"
-            step="0.001"
-            min="0.001"
+            step="0.1"
+            min="0.1"
+            onWheel={blurOnWheel}
             value={cantidad}
             onChange={(e) => setCantidad(e.target.value)}
             placeholder="0"

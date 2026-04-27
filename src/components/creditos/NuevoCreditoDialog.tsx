@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { searchClientes, getTicketsByCliente } from '@/lib/queries/clientes'
 import { crearCredito } from '@/lib/actions/creditos'
 import { formatMXN, formatDate } from '@/lib/utils/format'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 
 interface NuevoCreditoDialogProps {
   open: boolean
@@ -173,14 +174,14 @@ export function NuevoCreditoDialog({ open, onClose }: NuevoCreditoDialogProps) {
             <Label htmlFor="nc-monto">Monto del crédito *</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input id="nc-monto" type="number" step="0.01" min="0.01"
+              <Input id="nc-monto" type="number" step="0.01" min="0.01" onWheel={blurOnWheel}
                 value={monto} onChange={(e) => setMonto(e.target.value)}
                 className="pl-6" placeholder="0.00" required />
             </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="nc-plazo">Plazo (días) *</Label>
-            <Input id="nc-plazo" type="number" min="1"
+            <Input id="nc-plazo" type="number" min="1" onWheel={blurOnWheel}
               value={plazo} onChange={(e) => setPlazo(e.target.value)} required />
           </div>
         </div>
@@ -204,7 +205,7 @@ export function NuevoCreditoDialog({ open, onClose }: NuevoCreditoDialogProps) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="nc-mora">Tasa mora diaria (%)</Label>
-            <Input id="nc-mora" type="number" step="0.01" min="0"
+            <Input id="nc-mora" type="number" step="0.01" min="0" onWheel={blurOnWheel}
               value={tasaMora} onChange={(e) => setTasaMora(e.target.value)}
               placeholder="0.00" />
           </div>

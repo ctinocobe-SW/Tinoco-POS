@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { formatMXN } from '@/lib/utils/format'
+import { blurOnWheel } from '@/lib/utils/input-handlers'
 
 interface Perfil { id: string; nombre: string; rol: string }
 interface Almacen { id: string; nombre: string }
@@ -380,17 +381,17 @@ export function AdminCreateTicketDialog({ open, onClose, despachadores, almacene
                         )}
                       </td>
                       <td className="px-4 py-2">
-                        <input type="number" step="0.001" min="0.001"
+                        <input type="number" step="0.1" min="0.1" onWheel={blurOnWheel}
                           {...register(`items.${index}.cantidad`, { valueAsNumber: true })}
                           className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent" />
                       </td>
                       <td className="px-4 py-2">
-                        <input type="number" step="0.01" min="0"
+                        <input type="number" step="0.01" min="0" onWheel={blurOnWheel}
                           {...register(`items.${index}.precio_unitario`, { valueAsNumber: true })}
                           className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent" />
                       </td>
                       <td className="px-4 py-2">
-                        <input type="number" step="0.01" min="0"
+                        <input type="number" step="0.01" min="0" onWheel={blurOnWheel}
                           {...register(`items.${index}.descuento`, { valueAsNumber: true })}
                           placeholder="0"
                           className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent" />
