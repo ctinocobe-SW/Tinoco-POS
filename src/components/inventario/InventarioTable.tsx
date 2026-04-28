@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { AjusteDialog } from './AjusteDialog'
+import { AsignarDialog } from './AsignarDialog'
 import { ToggleControlaInventarioButton } from './ToggleControlaInventarioButton'
 
 interface StockEntry {
@@ -35,6 +36,14 @@ interface AjusteTarget {
   stock_actual: number
 }
 
+interface AsignarTarget {
+  producto_id: string
+  producto_nombre: string
+  producto_sku: string
+  almacen_id: string
+  almacen_nombre: string
+}
+
 interface InventarioTableProps {
   rows: ProductoRow[]
   almacenes: { id: string; nombre: string }[]
@@ -45,6 +54,8 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
   const [soloControlados, setSoloControlados] = useState(false)
   const [ajusteTarget, setAjusteTarget] = useState<AjusteTarget | null>(null)
   const [ajusteAlmacenes, setAjusteAlmacenes] = useState<{ id: string; nombre: string }[]>([])
+  const [asignarTarget, setAsignarTarget] = useState<AsignarTarget | null>(null)
+  const [asignarAlmacenes, setAsignarAlmacenes] = useState<{ id: string; nombre: string }[]>([])
   const [controlOverrides, setControlOverrides] = useState<Map<string, boolean>>(new Map())
 
   // Construir vista según filtro
@@ -52,7 +63,6 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
     return rows.map((p) => {
       const controla = controlOverrides.get(p.producto_id) ?? p.controla_inventario
       if (filtroAlmacen === 'todos') {
-        // Mostrar stock total
         return {
           producto_id: p.producto_id,
           producto_sku: p.producto_sku,
@@ -65,8 +75,8 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
             ? `${p.stock_entries.length} almacenes`
             : p.stock_entries[0]?.almacen_nombre ?? '—',
           tiene_stock: p.stock_total > 0,
-          // Para ajuste: si hay una sola entrada de almacén, usarla; si hay varias o ninguna, abrir picker
           ajuste_entry: p.stock_entries.length === 1 ? p.stock_entries[0] : null,
+          stock_entries_count: p.stock_entries.length,
         }
       } else {
         const entry = p.stock_entries.find((e) => e.almacen_id === filtroAlmacen)
@@ -82,6 +92,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
           almacen_nombre: almacen?.nombre ?? '',
           tiene_stock: (entry?.stock_actual ?? 0) > 0,
           ajuste_entry: entry ?? null,
+          stock_entries_count: p.stock_entries.length,
         }
       }
     })
@@ -118,6 +129,31 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
         almacen_id: '',
         almacen_nombre: '',
         stock_actual: row.stock,
+      })
+    }
+  }
+
+  const handleAsignar = (row: typeof tableRows[0]) => {
+    if (filtroAlmacen !== 'todos') {
+      // Almacén ya conocido por el filtro activo
+      const almacen = almacenes.find((a) => a.id === filtroAlmacen)
+      setAsignarAlmacenes([])
+      setAsignarTarget({
+        producto_id: row.producto_id,
+        producto_nombre: row.producto_nombre,
+        producto_sku: row.producto_sku,
+        almacen_id: filtroAlmacen,
+        almacen_nombre: almacen?.nombre ?? '',
+      })
+    } else {
+      // Vista "todos" — necesita elegir almacén
+      setAsignarAlmacenes(almacenes)
+      setAsignarTarget({
+        producto_id: row.producto_id,
+        producto_nombre: row.producto_nombre,
+        producto_sku: row.producto_sku,
+        almacen_id: '',
+        almacen_nombre: '',
       })
     }
   }
@@ -221,9 +257,17 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="outline" onClick={() => handleAjustar(row)}>
-                      Ajustar
-                    </Button>
+                    {/* Mostrar "Asignar" si el producto no tiene entrada en el contexto actual */}
+                    {(filtroAlmacen !== 'todos' && !row.ajuste_entry) ||
+                     (filtroAlmacen === 'todos' && row.stock_entries_count === 0) ? (
+                      <Button size="sm" variant="outline" onClick={() => handleAsignar(row)}>
+                        Asignar
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => handleAjustar(row)}>
+                        Ajustar
+                      </Button>
+                    )}
                   </td>
                 </tr>
               )
@@ -239,6 +283,15 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
           onClose={() => { setAjusteTarget(null); setAjusteAlmacenes([]) }}
           item={ajusteTarget}
           almacenesDisponibles={ajusteAlmacenes}
+        />
+      )}
+
+      {asignarTarget && (
+        <AsignarDialog
+          open={!!asignarTarget}
+          onClose={() => { setAsignarTarget(null); setAsignarAlmacenes([]) }}
+          item={asignarTarget}
+          almacenes={asignarAlmacenes}
         />
       )}
     </>

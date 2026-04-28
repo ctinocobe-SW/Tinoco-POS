@@ -5,6 +5,44 @@ import { getAuthenticatedProfile } from './helpers'
 import { ajusteInventarioSchema } from '@/lib/validations/schemas'
 import type { AjusteInventarioInput } from '@/lib/validations/schemas'
 
+export async function registrarProductoEnAlmacen(producto_id: string, almacen_id: string) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+
+  if (profile.rol !== 'admin') {
+    return { error: 'Solo el administrador puede registrar inventario' }
+  }
+
+  if (!producto_id || !almacen_id) {
+    return { error: 'Faltan datos requeridos' }
+  }
+
+  const { data: existing } = await supabase
+    .from('inventario')
+    .select('id')
+    .eq('producto_id', producto_id)
+    .eq('almacen_id', almacen_id)
+    .maybeSingle()
+
+  if (existing) {
+    return { error: 'El producto ya está registrado en este almacén' }
+  }
+
+  const { error } = await supabase
+    .from('inventario')
+    .insert({
+      id: crypto.randomUUID(),
+      producto_id,
+      almacen_id,
+      stock_actual: 0,
+      stock_minimo: 0,
+    })
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/inventario')
+  return { data: { ok: true } }
+}
+
 export async function ajustarInventario(input: AjusteInventarioInput) {
   const { profile, supabase } = await getAuthenticatedProfile()
 
