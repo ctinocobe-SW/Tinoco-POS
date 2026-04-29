@@ -48,6 +48,8 @@ export const productoSchema = z.object({
   piezas_por_bulto: z.number().positive().optional(),
   unidad_precio_base: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.enum(['pza', 'kg']).optional()),
   unidad_precio_mayoreo: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.enum(UNIDADES_VENTA).optional()),
+  unidad_inventario_principal: z.enum(UNIDADES_VENTA).default('pza'),
+  proveedor_whatsapp: z.string().max(20).optional().or(z.literal('')),
   requiere_caducidad: z.boolean().default(false),
   fecha_caducidad: z.string().optional(),
   codigo_barras: z.string().optional(),
@@ -112,6 +114,34 @@ export const proveedorSchema = z.object({
   telefono: z.string().max(20).optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
 })
+
+export const preferenciasSurtidoSchema = z.object({
+  top_n: z.number().int().min(1).max(200).default(20),
+  incluir_bajo_minimo: z.boolean().default(true),
+  almacen_destino_default: z.string().uuid().optional(),
+  solo_controla_inventario: z.boolean().default(true),
+})
+
+export const generarBorradorSurtidoSchema = z.object({
+  almacen_destino_id: z.string().uuid('Selecciona el almacén destino'),
+  top_n: z.number().int().min(1).max(200).optional(),
+  incluir_bajo_minimo: z.boolean().optional(),
+  solo_controla_inventario: z.boolean().optional(),
+})
+
+export const crearListaSurtidoSchema = z.object({
+  almacen_destino_id: z.string().uuid(),
+  notas: z.string().max(500).optional(),
+  items: z.array(z.object({
+    producto_id: z.string().uuid(),
+    cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
+    almacen_origen_item_id: z.string().uuid().optional(),
+  })).min(1, 'Agrega al menos un producto'),
+})
+
+export type PreferenciasSurtidoInput = z.infer<typeof preferenciasSurtidoSchema>
+export type GenerarBorradorSurtidoInput = z.infer<typeof generarBorradorSurtidoSchema>
+export type CrearListaSurtidoInput = z.infer<typeof crearListaSurtidoSchema>
 
 export type CrearTicketInput = z.infer<typeof crearTicketSchema>
 export type ProductoInput = z.infer<typeof productoSchema>

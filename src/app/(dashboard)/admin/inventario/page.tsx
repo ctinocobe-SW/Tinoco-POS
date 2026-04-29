@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { History } from 'lucide-react'
+import { History, AlertTriangle } from 'lucide-react'
 import { InventarioTable } from '@/components/inventario/InventarioTable'
 
 export const metadata = { title: 'Inventario — POS TINOCO' }
@@ -108,13 +108,22 @@ export default async function InventarioPage() {
             {bajosMinimo > 0 && ` · ${bajosMinimo} bajo mínimo`}
           </p>
         </div>
-        <Link
-          href="/admin/inventario/movimientos"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md px-3 py-2 transition-colors"
-        >
-          <History size={14} />
-          Ver movimientos
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/inventario/alertas"
+            className="inline-flex items-center gap-1.5 text-sm text-amber-700 hover:text-amber-900 border border-amber-300 bg-amber-50 rounded-md px-3 py-2 transition-colors"
+          >
+            <AlertTriangle size={14} />
+            Alertas {bajosMinimo > 0 && `(${bajosMinimo})`}
+          </Link>
+          <Link
+            href="/admin/inventario/movimientos"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md px-3 py-2 transition-colors"
+          >
+            <History size={14} />
+            Ver movimientos
+          </Link>
+        </div>
       </div>
 
       <InventarioTable rows={rows} almacenes={almacenesList} />

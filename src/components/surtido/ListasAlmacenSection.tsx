@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, ClipboardList } from 'lucide-react'
+import { Plus, ClipboardList, Sparkles, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ListaDetalle, type ListaData } from './ListaDetalle'
 import { ListaAlmacenDialog } from './ListaAlmacenDialog'
+import { BorradorSurtidoDialog } from './BorradorSurtidoDialog'
+import { PreferenciasSurtidoDialog } from './PreferenciasSurtidoDialog'
 
 interface Props {
   listas: ListaData[]
@@ -13,6 +15,8 @@ interface Props {
 
 export function ListasAlmacenSection({ listas: initialListas, rol }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [borradorOpen, setBorradorOpen] = useState(false)
+  const [prefOpen, setPrefOpen] = useState(false)
   const [listas] = useState(initialListas)
 
   const canCreate = rol === 'admin' || rol === 'despachador'
@@ -33,10 +37,24 @@ export function ListasAlmacenSection({ listas: initialListas, rol }: Props) {
           </div>
         </div>
         {canCreate && (
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus size={15} className="mr-1.5" />
-            Nueva lista
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPrefOpen(true)}
+              className="text-muted-foreground hover:text-foreground border border-border rounded-md p-2 transition-colors"
+              title="Preferencias de surtido"
+            >
+              <Settings size={14} />
+            </button>
+            <Button variant="outline" onClick={() => setBorradorOpen(true)}>
+              <Sparkles size={14} className="mr-1.5" />
+              Borrador automático
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus size={15} className="mr-1.5" />
+              Nueva lista
+            </Button>
+          </div>
         )}
       </div>
 
@@ -80,7 +98,11 @@ export function ListasAlmacenSection({ listas: initialListas, rol }: Props) {
       )}
 
       {canCreate && (
-        <ListaAlmacenDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+        <>
+          <ListaAlmacenDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+          <BorradorSurtidoDialog open={borradorOpen} onClose={() => setBorradorOpen(false)} />
+          <PreferenciasSurtidoDialog open={prefOpen} onClose={() => setPrefOpen(false)} />
+        </>
       )}
     </div>
   )
