@@ -190,3 +190,68 @@ export async function marcarListaSurtidoEntregada(listaId: string) {
   revalidateAll()
   return { data: { ok: true } }
 }
+
+// ---------------------------------------------------------------
+// Acciones del checador para verificar listas de surtido
+// ---------------------------------------------------------------
+
+export async function toggleItemSurtidoChecado(itemId: string, checado: boolean) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (!['admin', 'checador', 'despachador'].includes(profile.rol)) {
+    return { error: 'No autorizado' }
+  }
+
+  const { error } = await supabase
+    .from('lista_surtido_items')
+    .update({
+      checado_checador: checado,
+      checado_checador_at: checado ? new Date().toISOString() : null,
+      checado_checador_por: checado ? profile.id : null,
+    })
+    .eq('id', itemId)
+
+  if (error) return { error: error.message }
+  return { data: { ok: true } }
+}
+
+export async function confirmarRecepcionSurtidoChecador(listaId: string) {
+  const { profile, supabase } = await getAuthenticatedProfile()
+  if (!['admin', 'checador'].includes(profile.rol)) {
+    return { error: 'Solo admin o checador pueden confirmar la recepción del surtido' }
+  }
+
+  const { data: items, error: itemsErr } = await supabase
+    .from('lista_surtido_items')
+    .select('id, checado_checador')
+    .eq('lista_id', listaId)
+
+  if (itemsErr) return { error: itemsErr.message }
+  if (!items || items.length === 0) return { error: 'La lista no tiene items' }
+
+  const sinChecar = items.filter((i: any) => !i.checado_checador)
+  if (sinChecar.length > 0) {
+    return { error: `Faltan ${sinChecar.length} producto(s) por verificar` }
+  }
+
+  const { data: lista } = await supabase
+    .from('listas_surtido')
+    .select('almacen_origen_id, lista_surtido_items(id, almacen_origen_item_id)')
+    .eq('id', listaId)
+    .single()
+
+  const sinOrigen = ((lista as any)?.lista_surtido_items ?? []).filter(
+    (i: any) => !i.almacen_origen_item_id && !(lista as any).almacen_origen_id
+  )
+  if (sinOrigen.length > 0) {
+    return { error: `${sinOrigen.length} item(s) no tienen bodega origen asignada. El despachador debe editar la lista primero.` }
+  }
+
+  const { error } = await supabase.rpc('confirmar_entrega_lista_surtido', {
+    p_lista_id: listaId,
+  })
+
+  if (error) return { error: error.message }
+  revalidateAll()
+  revalidatePath('/checador/surtido')
+  return { data: { ok: true } }
+}
