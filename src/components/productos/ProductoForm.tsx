@@ -62,7 +62,6 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
       unidad_precio_base: undefined,
       unidad_precio_mayoreo: undefined,
       unidad_inventario_principal: 'pza',
-      proveedor_whatsapp: '',
       requiere_caducidad: false,
       fecha_caducidad: undefined,
       stock_inicial: 0,
@@ -399,32 +398,18 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
       <div className="border border-border rounded-lg p-5 space-y-4">
         <h2 className="text-sm font-medium">Inventario</h2>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="unidad_inventario_principal">Unidad principal del inventario</Label>
-            <Select id="unidad_inventario_principal" {...register('unidad_inventario_principal')}>
-              {(unidadesDisponibles.length > 0 ? unidadesDisponibles : ['pza','kg','caja','bulto'] as const).map((u) => (
-                <option key={u} value={u}>
-                  {u === 'pza' ? 'Por pieza' : u === 'kg' ? 'Por kilogramo' : u === 'caja' ? 'Por caja' : 'Por bulto'}
-                </option>
-              ))}
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Unidad usada para mínimos, máximos y alertas. Ej: si vendes Golden por caja y kg, deja "caja".
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="proveedor_whatsapp">WhatsApp del proveedor (opcional)</Label>
-            <Input
-              id="proveedor_whatsapp"
-              {...register('proveedor_whatsapp')}
-              placeholder="+521234567890"
-            />
-            <p className="text-xs text-muted-foreground">
-              Override directo. Si está vacío se usa el teléfono del proveedor vinculado.
-            </p>
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="unidad_inventario_principal">Unidad principal del inventario</Label>
+          <Select id="unidad_inventario_principal" {...register('unidad_inventario_principal')} className="max-w-xs">
+            {(unidadesDisponibles.length > 0 ? unidadesDisponibles : ['pza','kg','caja','bulto'] as const).map((u) => (
+              <option key={u} value={u}>
+                {u === 'pza' ? 'Por pieza' : u === 'kg' ? 'Por kilogramo' : u === 'caja' ? 'Por caja' : 'Por bulto'}
+              </option>
+            ))}
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Unidad usada para mínimos, máximos y alertas. Ej: si vendes Golden por caja y kg, deja "caja".
+          </p>
         </div>
       </div>
 
