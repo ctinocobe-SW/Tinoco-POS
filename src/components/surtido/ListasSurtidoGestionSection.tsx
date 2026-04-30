@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ChevronDown, ChevronRight, Package, Truck, CheckCheck, AlertTriangle, Sparkles, Settings } from 'lucide-react'
+import { ChevronDown, ChevronRight, Package, Truck, CheckCheck, AlertTriangle, Sparkles, Settings, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/utils/format'
 import { cambiarEstadoListaSurtido, marcarListaSurtidoEntregada } from '@/lib/actions/listasSurtido'
 import { BorradorSurtidoDialog } from './BorradorSurtidoDialog'
 import { PreferenciasSurtidoDialog } from './PreferenciasSurtidoDialog'
+import { NuevaListaSurtidoDialog } from './NuevaListaSurtidoDialog'
 import type { ListaSurtidoData } from './ListasSurtidoVerificacionSection'
 
 interface Props {
@@ -181,6 +182,7 @@ function ListaSurtidoGestionCard({
 }
 
 export function ListasSurtidoGestionSection({ listas, rol }: Props) {
+  const [nuevaOpen, setNuevaOpen] = useState(false)
   const [borradorOpen, setBorradorOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
 
@@ -194,9 +196,13 @@ export function ListasSurtidoGestionSection({ listas, rol }: Props) {
           <Settings size={13} className="mr-1.5" />
           Preferencias
         </Button>
-        <Button size="sm" onClick={() => setBorradorOpen(true)}>
+        <Button size="sm" variant="outline" onClick={() => setBorradorOpen(true)}>
           <Sparkles size={13} className="mr-1.5" />
           Borrador automático
+        </Button>
+        <Button size="sm" onClick={() => setNuevaOpen(true)}>
+          <Plus size={13} className="mr-1.5" />
+          Nueva lista
         </Button>
       </div>
 
@@ -232,6 +238,7 @@ export function ListasSurtidoGestionSection({ listas, rol }: Props) {
         </div>
       )}
 
+      <NuevaListaSurtidoDialog open={nuevaOpen} onClose={() => setNuevaOpen(false)} />
       <BorradorSurtidoDialog open={borradorOpen} onClose={() => setBorradorOpen(false)} />
       <PreferenciasSurtidoDialog open={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </div>
