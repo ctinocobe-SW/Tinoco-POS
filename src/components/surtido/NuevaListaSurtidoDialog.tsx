@@ -76,12 +76,11 @@ export function NuevaListaSurtidoDialog({ open, onClose }: Props) {
       toast.message(`${p.nombre} ya está en la lista`)
       return
     }
-    const unidad = p.vende_caja ? 'caja' : p.vende_kg ? 'kg' : p.vende_bulto ? 'bulto' : 'pza'
     setItems((prev) => [...prev, {
       producto_id: p.id,
       nombre: p.nombre,
       sku: p.sku,
-      unidad,
+      unidad: p.unidad_inventario_principal,
       cantidad: 1,
       almacen_origen_item_id: bodegas[0]?.id ?? '',
     }])
