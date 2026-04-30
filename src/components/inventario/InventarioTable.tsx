@@ -71,9 +71,8 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
           controla_inventario: controla,
           stock: p.stock_total,
           stock_minimo: Math.min(...p.stock_entries.map((e) => e.stock_minimo), Infinity) === Infinity ? 0 : Math.min(...p.stock_entries.map((e) => e.stock_minimo)),
-          almacen_nombre: p.stock_entries.length > 1
-            ? `${p.stock_entries.length} almacenes`
-            : p.stock_entries[0]?.almacen_nombre ?? '—',
+          almacen_nombre: p.stock_entries[0]?.almacen_nombre ?? '—',
+          stock_entries: p.stock_entries,
           tiene_stock: p.stock_total > 0,
           ajuste_entry: p.stock_entries.length === 1 ? p.stock_entries[0] : null,
           stock_entries_count: p.stock_entries.length,
@@ -90,6 +89,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
           stock: entry?.stock_actual ?? 0,
           stock_minimo: entry?.stock_minimo ?? 0,
           almacen_nombre: almacen?.nombre ?? '',
+          stock_entries: entry ? [entry] : [],
           tiene_stock: (entry?.stock_actual ?? 0) > 0,
           ajuste_entry: entry ?? null,
           stock_entries_count: p.stock_entries.length,
@@ -198,7 +198,7 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
             <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
               <th className="px-4 py-2.5 text-left">Producto</th>
               <th className="px-4 py-2.5 text-left w-28">Categoría</th>
-              {filtroAlmacen === 'todos' && <th className="px-4 py-2.5 text-left">Almacén(es)</th>}
+              {filtroAlmacen === 'todos' && <th className="px-4 py-2.5 text-left w-56">Stock por almacén</th>}
               <th className="px-4 py-2.5 text-center w-24">Control</th>
               <th className="px-4 py-2.5 text-right w-28">Stock</th>
               <th className="px-4 py-2.5 text-center w-24">Estado</th>
@@ -217,7 +217,26 @@ export function InventarioTable({ rows, almacenes }: InventarioTableProps) {
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{row.producto_categoria}</td>
                   {filtroAlmacen === 'todos' && (
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{row.almacen_nombre}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {row.stock_entries.length === 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <div className="space-y-0.5">
+                          {row.stock_entries.map((e) => {
+                            const fmt = e.stock_actual % 1 === 0
+                              ? e.stock_actual.toString()
+                              : e.stock_actual.toFixed(3).replace(/0+$/, '')
+                            const neg = e.stock_actual < 0
+                            return (
+                              <div key={e.almacen_id} className="flex items-center justify-between gap-3">
+                                <span className="text-muted-foreground">{e.almacen_nombre}</span>
+                                <span className={`font-mono tabular-nums ${neg ? 'text-red-600' : ''}`}>{fmt}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </td>
                   )}
                   <td className="px-4 py-3 text-center">
                     <ToggleControlaInventarioButton
