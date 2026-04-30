@@ -49,7 +49,6 @@ export const productoSchema = z.object({
   unidad_precio_base: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.enum(['pza', 'kg']).optional()),
   unidad_precio_mayoreo: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.enum(UNIDADES_VENTA).optional()),
   unidad_inventario_principal: z.enum(UNIDADES_VENTA).default('pza'),
-  proveedor_whatsapp: z.string().max(20).optional().or(z.literal('')),
   requiere_caducidad: z.boolean().default(false),
   fecha_caducidad: z.string().optional(),
   codigo_barras: z.string().optional(),
