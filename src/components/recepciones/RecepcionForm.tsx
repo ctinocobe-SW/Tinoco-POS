@@ -5,11 +5,17 @@ import { useRouter } from 'next/navigation'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
-import { Plus, Trash2, Search } from 'lucide-react'
+import { Trash2, Search } from 'lucide-react'
 
-import { crearRecepcionSchema } from '@/lib/validations/schemas'
-import type { CrearRecepcionInput } from '@/lib/validations/schemas'
-import { crearRecepcion } from '@/lib/actions/recepciones'
+import {
+  crearRecepcionSchema,
+  DISCREPANCIA_TIPOS,
+} from '@/lib/validations/schemas'
+import type {
+  CrearRecepcionInput,
+  DiscrepanciaTipo,
+} from '@/lib/validations/schemas'
+import { crearRecepcion, actualizarRecepcion } from '@/lib/actions/recepciones'
 import { searchProveedores } from '@/lib/queries/proveedores'
 import { searchProductos } from '@/lib/queries/productos'
 import { blurOnWheel } from '@/lib/utils/input-handlers'
@@ -18,68 +24,117 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 
-interface Almacen {
-  id: string
-  nombre: string
-  tipo: string
-}
-
-interface Zona {
-  id: string
-  nombre: string
-  almacen_id: string
-  despachador_nombre: string | null
-}
+interface Almacen { id: string; nombre: string; tipo: string }
+interface Zona { id: string; nombre: string; almacen_id: string; despachador_nombre: string | null }
+interface Despachador { id: string; nombre: string }
+interface ProveedorOpt { id: string; nombre: string; rfc: string | null }
+interface ProductoMeta { id: string; sku: string; nombre: string; requiere_caducidad: boolean }
 
 interface RecepcionFormProps {
   almacenes: Almacen[]
   zonas: Zona[]
-  rol: string
+  despachadores: Despachador[]
+  defaultProveedor?: ProveedorOpt | null
+  initial?: {
+    recepcion_id: string
+    proveedor_id: string | null
+    almacen_id: string
+    despachador_responsable_id: string | null
+    fecha: string
+    fecha_factura: string | null
+    folio_factura: string | null
+    monto_factura: number | null
+    notas: string | null
+    items: Array<{
+      producto_id: string
+      sku: string
+      nombre: string
+      requiere_caducidad: boolean
+      cantidad_esperada: number | null
+      cantidad_recibida: number
+      fecha_caducidad: string | null
+      discrepancia_tipo: DiscrepanciaTipo | null
+      discrepancia: string | null
+      zona_id: string | null
+    }>
+  }
+  cancelHref?: string
+  successHref?: string
 }
 
-interface ProveedorResult {
-  id: string
-  nombre: string
-  rfc: string | null
+const DISCREPANCIA_LABELS: Record<DiscrepanciaTipo, string> = {
+  faltante: 'Faltante',
+  sobrante: 'Sobrante',
+  danado: 'Dañado',
+  devolucion: 'Devolución',
 }
 
-interface ProductoResult {
-  id: string
-  sku: string
-  nombre: string
-  requiere_caducidad: boolean
-}
-
-export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
+export function RecepcionForm({
+  almacenes,
+  zonas,
+  despachadores,
+  defaultProveedor = null,
+  initial,
+  cancelHref = '/checador/recepciones',
+  successHref = '/checador/recepciones',
+}: RecepcionFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
 
-  // Despachadores solo ven sucursales; admin ve todos
-  const almacenesDisponibles = rol === 'admin'
-    ? almacenes
-    : almacenes.filter((a) => a.tipo === 'sucursal')
-
-  // Proveedor search
-  const [proveedorQuery, setProveedorQuery] = useState('')
-  const [proveedoresResults, setProveedoresResults] = useState<ProveedorResult[]>([])
+  const [proveedorQuery, setProveedorQuery] = useState(defaultProveedor?.nombre ?? '')
+  const [proveedoresResults, setProveedoresResults] = useState<ProveedorOpt[]>([])
   const [showProveedorDropdown, setShowProveedorDropdown] = useState(false)
-  const [proveedorSeleccionado, setProveedorSeleccionado] = useState<ProveedorResult | null>(null)
 
-  // Producto search
   const [productoQuery, setProductoQuery] = useState('')
   const [productosResults, setProductosResults] = useState<any[]>([])
   const [showProductoDropdown, setShowProductoDropdown] = useState(false)
-  const [productosMeta, setProductosMeta] = useState<Map<string, ProductoResult>>(new Map())
+
+  const initialMeta = new Map<string, ProductoMeta>()
+  if (initial) {
+    for (const it of initial.items) {
+      initialMeta.set(it.producto_id, {
+        id: it.producto_id,
+        sku: it.sku,
+        nombre: it.nombre,
+        requiere_caducidad: it.requiere_caducidad,
+      })
+    }
+  }
+  const [productosMeta, setProductosMeta] = useState<Map<string, ProductoMeta>>(initialMeta)
 
   const form = useForm<CrearRecepcionInput>({
     resolver: zodResolver(crearRecepcionSchema),
-    defaultValues: {
-      proveedor_id: undefined,
-      almacen_id: almacenesDisponibles[0]?.id ?? '',
-      fecha: new Date().toISOString().split('T')[0],
-      notas: '',
-      items: [],
-    },
+    defaultValues: initial
+      ? {
+          proveedor_id: initial.proveedor_id ?? undefined,
+          almacen_id: initial.almacen_id,
+          despachador_responsable_id: initial.despachador_responsable_id ?? undefined,
+          fecha: initial.fecha,
+          fecha_factura: initial.fecha_factura ?? undefined,
+          folio_factura: initial.folio_factura ?? undefined,
+          monto_factura: initial.monto_factura ?? undefined,
+          notas: initial.notas ?? '',
+          items: initial.items.map((it) => ({
+            producto_id: it.producto_id,
+            cantidad_esperada: it.cantidad_esperada ?? undefined,
+            cantidad_recibida: Number(it.cantidad_recibida),
+            fecha_caducidad: it.fecha_caducidad ?? undefined,
+            discrepancia_tipo: it.discrepancia_tipo ?? undefined,
+            discrepancia: it.discrepancia ?? undefined,
+            zona_id: it.zona_id ?? undefined,
+          })),
+        }
+      : {
+          proveedor_id: defaultProveedor?.id,
+          almacen_id: almacenes[0]?.id ?? '',
+          despachador_responsable_id: undefined,
+          fecha: new Date().toISOString().split('T')[0],
+          fecha_factura: undefined,
+          folio_factura: '',
+          monto_factura: undefined,
+          notas: '',
+          items: [],
+        },
   })
 
   const { register, handleSubmit, control, setValue, formState: { errors }, watch } = form
@@ -88,10 +143,8 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
   const watchedAlmacenId = watch('almacen_id')
   const watchedItems = watch('items')
 
-  // Zonas filtradas por almacén seleccionado
   const zonasDelAlmacen = zonas.filter((z) => z.almacen_id === watchedAlmacenId)
 
-  // Buscar proveedores
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (proveedorQuery.length >= 2) {
@@ -106,7 +159,6 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
     return () => clearTimeout(timer)
   }, [proveedorQuery])
 
-  // Buscar productos
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (productoQuery.length >= 2) {
@@ -121,8 +173,7 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
     return () => clearTimeout(timer)
   }, [productoQuery])
 
-  const handleSelectProveedor = (p: ProveedorResult) => {
-    setProveedorSeleccionado(p)
+  const handleSelectProveedor = (p: ProveedorOpt) => {
     setValue('proveedor_id', p.id)
     setProveedorQuery(p.nombre)
     setShowProveedorDropdown(false)
@@ -140,6 +191,7 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
       cantidad_recibida: 1,
       cantidad_esperada: undefined,
       fecha_caducidad: undefined,
+      discrepancia_tipo: undefined,
       discrepancia: undefined,
       zona_id: undefined,
     })
@@ -151,28 +203,31 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
   const onSubmit = async (data: CrearRecepcionInput) => {
     setSubmitting(true)
     try {
-      const result = await crearRecepcion(data)
-      if (result.error) {
+      const result = initial
+        ? await actualizarRecepcion({ recepcion_id: initial.recepcion_id, ...data })
+        : await crearRecepcion(data)
+      if ('error' in result && result.error) {
         toast.error(result.error)
         return
       }
-      toast.success('Recepción registrada correctamente')
-      router.push('/despachador/recepciones')
+      toast.success(initial ? 'Recepción actualizada' : 'Recepción registrada')
+      const id = (result as any).data?.id ?? initial?.recepcion_id
+      router.push(id ? `/checador/recepciones/${id}` : successHref)
+      router.refresh()
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-4xl">
       {/* Encabezado */}
       <div className="border border-border rounded-lg p-5 space-y-4">
         <h2 className="text-sm font-medium">Datos de la recepción</h2>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* Proveedor */}
           <div className="space-y-1.5">
-            <Label>Proveedor (opcional)</Label>
+            <Label>Proveedor</Label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -180,10 +235,7 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
                 value={proveedorQuery}
                 onChange={(e) => {
                   setProveedorQuery(e.target.value)
-                  if (!e.target.value) {
-                    setProveedorSeleccionado(null)
-                    setValue('proveedor_id', undefined)
-                  }
+                  if (!e.target.value) setValue('proveedor_id', undefined)
                 }}
                 placeholder="Buscar proveedor..."
                 className="w-full pl-8 pr-3 py-2 border border-border rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand-accent"
@@ -206,37 +258,66 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
             </div>
           </div>
 
-          {/* Almacén */}
           <div className="space-y-1.5">
-            <Label htmlFor="almacen_id">Almacén *</Label>
+            <Label htmlFor="almacen_id">Almacén que recibe *</Label>
             <Select id="almacen_id" {...register('almacen_id')}>
-              {almacenesDisponibles.map((a) => (
-                <option key={a.id} value={a.id}>{a.nombre}</option>
+              {almacenes.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nombre} ({a.tipo})
+                </option>
               ))}
             </Select>
             {errors.almacen_id && <p className="text-xs text-red-600">{errors.almacen_id.message}</p>}
           </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="despachador_responsable_id">Despachador que acomodará</Label>
+            <Select id="despachador_responsable_id" {...register('despachador_responsable_id')}>
+              <option value="">— Sin asignar —</option>
+              {despachadores.map((d) => (
+                <option key={d.id} value={d.id}>{d.nombre}</option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="fecha">Fecha de recepción</Label>
+            <Input id="fecha" type="date" {...register('fecha')} />
+          </div>
         </div>
 
-        {/* Fecha — fila completa */}
-        <div className="space-y-1.5">
-          <Label htmlFor="fecha">Fecha</Label>
-          <Input
-            id="fecha"
-            type="date"
-            className="max-w-xs"
-            {...register('fecha')}
-          />
+        {/* Datos de factura */}
+        <div className="border-t border-border pt-4">
+          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Factura del proveedor</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="folio_factura">Folio</Label>
+              <Input id="folio_factura" {...register('folio_factura')} placeholder="A-12345" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fecha_factura">Fecha de factura</Label>
+              <Input id="fecha_factura" type="date" {...register('fecha_factura')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="monto_factura">Monto total</Label>
+              <Input
+                id="monto_factura"
+                type="number"
+                step="0.01"
+                min="0"
+                onWheel={blurOnWheel}
+                {...register('monto_factura', { valueAsNumber: true })}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            El PDF / imagen de la factura se sube desde la pantalla de detalle, después de guardar.
+          </p>
         </div>
 
-        {/* Notas — fila completa */}
         <div className="space-y-1.5">
           <Label htmlFor="notas">Notas</Label>
-          <Input
-            id="notas"
-            {...register('notas')}
-            placeholder="Observaciones sobre esta recepción..."
-          />
+          <Input id="notas" {...register('notas')} placeholder="Observaciones..." />
         </div>
       </div>
 
@@ -249,7 +330,6 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
           )}
         </div>
 
-        {/* Buscador de producto */}
         <div className="px-4 py-3 border-b border-border">
           <div className="relative max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -278,101 +358,130 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
           </div>
         </div>
 
-        {/* Tabla de items */}
         {fields.length > 0 ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
-                <th className="px-4 py-2 text-left">Producto</th>
-                <th className="px-4 py-2 text-center w-28">Esperada</th>
-                <th className="px-4 py-2 text-center w-28">Recibida *</th>
-                <th className="px-4 py-2 text-center w-32">Caducidad</th>
-                <th className="px-4 py-2 text-left w-40">Zona</th>
-                <th className="px-4 py-2 w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {fields.map((field, index) => {
-                const meta = productosMeta.get(watchedItems[index]?.producto_id ?? '')
-                return (
-                  <tr key={field.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2">
-                      {meta ? (
-                        <div>
-                          <p className="font-medium">{meta.nombre}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{meta.sku}</p>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        onWheel={blurOnWheel}
-                        {...register(`items.${index}.cantidad_esperada`, { valueAsNumber: true })}
-                        placeholder="—"
-                        className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0.1"
-                        onWheel={blurOnWheel}
-                        {...register(`items.${index}.cantidad_recibida`, { valueAsNumber: true })}
-                        className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
-                      />
-                      {errors.items?.[index]?.cantidad_recibida && (
-                        <p className="text-xs text-red-600 mt-0.5">{errors.items[index].cantidad_recibida?.message}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      {meta?.requiere_caducidad ? (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
+                  <th className="px-3 py-2 text-left">Producto</th>
+                  <th className="px-3 py-2 text-center w-24">Esperada</th>
+                  <th className="px-3 py-2 text-center w-24">Recibida *</th>
+                  <th className="px-3 py-2 text-center w-32">Caducidad</th>
+                  <th className="px-3 py-2 text-left w-32">Discrepancia</th>
+                  <th className="px-3 py-2 text-left w-36">Zona</th>
+                  <th className="px-3 py-2 w-8"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {fields.map((field, index) => {
+                  const meta = productosMeta.get(watchedItems[index]?.producto_id ?? '')
+                  const esperada = watchedItems[index]?.cantidad_esperada
+                  const recibida = watchedItems[index]?.cantidad_recibida
+                  const muestraDiff =
+                    esperada != null &&
+                    !Number.isNaN(Number(esperada)) &&
+                    Number(esperada) !== Number(recibida)
+                  return (
+                    <tr key={field.id} className="border-b border-border last:border-0 align-top">
+                      <td className="px-3 py-2">
+                        {meta ? (
+                          <div>
+                            <p className="font-medium">{meta.nombre}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{meta.sku}</p>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
                         <input
-                          type="date"
-                          {...register(`items.${index}.fecha_caducidad`)}
-                          className="w-full bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          onWheel={blurOnWheel}
+                          {...register(`items.${index}.cantidad_esperada`, { valueAsNumber: true })}
+                          placeholder="—"
+                          className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm"
                         />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">N/A</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      {zonasDelAlmacen.length > 0 ? (
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          onWheel={blurOnWheel}
+                          {...register(`items.${index}.cantidad_recibida`, { valueAsNumber: true })}
+                          className={`w-full text-center bg-white border rounded px-2 py-1 text-sm ${
+                            muestraDiff ? 'border-amber-400 bg-amber-50' : 'border-border'
+                          }`}
+                        />
+                        {errors.items?.[index]?.cantidad_recibida && (
+                          <p className="text-xs text-red-600 mt-0.5">
+                            {errors.items[index]?.cantidad_recibida?.message}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {meta?.requiere_caducidad ? (
+                          <input
+                            type="date"
+                            {...register(`items.${index}.fecha_caducidad`)}
+                            className="w-full bg-white border border-border rounded px-2 py-1 text-sm"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
                         <select
-                          {...register(`items.${index}.zona_id`)}
-                          className="w-full bg-white border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                          {...register(`items.${index}.discrepancia_tipo`)}
+                          className="w-full bg-white border border-border rounded px-2 py-1 text-sm"
                         >
-                          <option value="">Sin zona</option>
-                          {zonasDelAlmacen.map((z) => (
-                            <option key={z.id} value={z.id}>
-                              {z.nombre}{z.despachador_nombre ? ` (${z.despachador_nombre})` : ''}
+                          <option value="">—</option>
+                          {DISCREPANCIA_TIPOS.map((tipo) => (
+                            <option key={tipo} value={tipo}>
+                              {DISCREPANCIA_LABELS[tipo]}
                             </option>
                           ))}
                         </select>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => remove(index)}
-                        className="text-muted-foreground hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                        <input
+                          type="text"
+                          {...register(`items.${index}.discrepancia`)}
+                          placeholder="Nota..."
+                          className="w-full mt-1 bg-white border border-border rounded px-2 py-1 text-xs"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        {zonasDelAlmacen.length > 0 ? (
+                          <select
+                            {...register(`items.${index}.zona_id`)}
+                            className="w-full bg-white border border-border rounded px-2 py-1 text-sm"
+                          >
+                            <option value="">Sin zona</option>
+                            {zonasDelAlmacen.map((z) => (
+                              <option key={z.id} value={z.id}>
+                                {z.nombre}{z.despachador_nombre ? ` (${z.despachador_nombre})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => remove(index)}
+                          className="text-muted-foreground hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="px-4 py-8 text-center text-muted-foreground text-sm">
@@ -381,15 +490,14 @@ export function RecepcionForm({ almacenes, zonas, rol }: RecepcionFormProps) {
         )}
       </div>
 
-      {/* Acciones */}
       <div className="flex gap-3">
         <Button type="submit" disabled={submitting || fields.length === 0}>
-          {submitting ? 'Registrando...' : 'Registrar recepción'}
+          {submitting ? 'Guardando...' : initial ? 'Guardar cambios' : 'Guardar recepción'}
         </Button>
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push('/despachador/recepciones')}
+          onClick={() => router.push(cancelHref)}
           disabled={submitting}
         >
           Cancelar
