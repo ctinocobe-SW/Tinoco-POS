@@ -73,7 +73,7 @@ export default async function FacturasProveedorPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-heading font-semibold">Facturas de proveedor</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -85,14 +85,14 @@ export default async function FacturasProveedorPage({
         </Link>
       </div>
 
-      <form className="border border-border rounded-lg p-4 mb-6 grid grid-cols-4 gap-3" method="GET">
+      <form className="border border-border rounded-lg p-4 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" method="GET">
         <div>
           <label className="text-xs text-muted-foreground block mb-1">Desde</label>
           <input
             name="desde"
             type="date"
             defaultValue={desdeFinal}
-            className="w-full bg-white border border-border rounded px-2 py-1.5 text-sm"
+            className="w-full bg-white border border-border rounded-md px-3 h-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
           />
         </div>
         <div>
@@ -101,7 +101,7 @@ export default async function FacturasProveedorPage({
             name="hasta"
             type="date"
             defaultValue={hastaFinal}
-            className="w-full bg-white border border-border rounded px-2 py-1.5 text-sm"
+            className="w-full bg-white border border-border rounded-md px-3 h-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
           />
         </div>
         <div>
@@ -109,7 +109,7 @@ export default async function FacturasProveedorPage({
           <select
             name="proveedor"
             defaultValue={proveedor ?? ''}
-            className="w-full bg-white border border-border rounded px-2 py-1.5 text-sm"
+            className="w-full bg-white border border-border rounded-md px-3 h-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
           >
             <option value="">Todos</option>
             {(proveedoresList ?? []).map((p: any) => (
@@ -125,11 +125,11 @@ export default async function FacturasProveedorPage({
               type="text"
               placeholder="A-12345"
               defaultValue={q ?? ''}
-              className="flex-1 bg-white border border-border rounded px-2 py-1.5 text-sm"
+              className="flex-1 bg-white border border-border rounded-md px-3 h-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
             />
             <button
               type="submit"
-              className="px-3 py-1.5 bg-brand-accent text-white text-sm rounded hover:bg-brand-accent/80"
+              className="px-4 h-10 bg-brand-accent text-white text-sm rounded-md hover:bg-brand-accent/80"
             >
               Filtrar
             </button>
@@ -143,7 +143,8 @@ export default async function FacturasProveedorPage({
         </div>
       )}
 
-      <div className="border border-border rounded-lg overflow-hidden">
+      {/* DESKTOP: tabla */}
+      <div className="hidden md:block border border-border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-brand-surface border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
@@ -198,6 +199,51 @@ export default async function FacturasProveedorPage({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* MOBILE: cards */}
+      <div className="md:hidden">
+        {lista.length === 0 ? (
+          <div className="border border-border rounded-lg px-4 py-8 text-center text-sm text-muted-foreground">
+            No hay facturas en el rango seleccionado
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {lista.map((r) => (
+              <Link
+                key={r.id}
+                href={`/admin/recepciones/${r.id}`}
+                className="block border border-border rounded-lg px-3 py-3"
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs">{r.folio_factura ?? 'Sin folio'}</span>
+                      <EstadoBadge estado={r.estado} />
+                    </div>
+                    <p className="text-sm font-medium mt-1 truncate">
+                      {r.proveedores?.nombre ?? 'Sin proveedor'}
+                    </p>
+                  </div>
+                  {r.monto_factura != null && (
+                    <p className="text-sm font-medium shrink-0">{formatMXN(Number(r.monto_factura))}</p>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {r.fecha_factura ? formatDate(r.fecha_factura) : `(${formatDate(r.fecha)})`}
+                    {r.almacenes?.nombre ? ` · ${r.almacenes.nombre}` : ''}
+                  </span>
+                  {r.factura_url ? (
+                    <span className="text-brand-accent">Con archivo</span>
+                  ) : (
+                    <span>Sin archivo</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   )

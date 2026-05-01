@@ -58,15 +58,15 @@ export default async function ChecadorRecepcionesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-heading font-semibold">Recepciones</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {borradores} borrador{borradores !== 1 ? 'es' : ''} · {enviadas} pendiente{enviadas !== 1 ? 's' : ''} de cierre · {cerradas} cerrada{cerradas !== 1 ? 's' : ''}
           </p>
         </div>
-        <Link href="/checador/recepciones/nueva">
-          <Button>
+        <Link href="/checador/recepciones/nueva" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">
             <Plus size={16} className="mr-1.5" />
             Nueva recepción
           </Button>

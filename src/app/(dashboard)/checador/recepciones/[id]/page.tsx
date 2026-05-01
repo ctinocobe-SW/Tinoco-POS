@@ -127,9 +127,9 @@ export default async function RecepcionDetallePage({ params }: { params: Promise
           }}
         />
 
-        <div className="mt-6 flex gap-2">
-          <MarcarRecibidaButton recepcionId={recepcion.id} />
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2 sticky bottom-0 bg-brand-bg pt-3 pb-2">
           <CancelarRecepcionButton recepcionId={recepcion.id} estado={recepcion.estado} />
+          <MarcarRecibidaButton recepcionId={recepcion.id} />
         </div>
       </div>
     )
@@ -148,7 +148,7 @@ export default async function RecepcionDetallePage({ params }: { params: Promise
         <EstadoBadge estado={recepcion.estado} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <DataRow label="Proveedor"      value={recepcion.proveedores?.nombre ?? '—'} />
         <DataRow label="Almacén"        value={`${recepcion.almacenes?.nombre} (${recepcion.almacenes?.tipo})`} />
         <DataRow label="Fecha"          value={formatDate(recepcion.fecha)} />
@@ -173,7 +173,7 @@ export default async function RecepcionDetallePage({ params }: { params: Promise
         />
       </div>
 
-      <div className="border border-border rounded-lg overflow-hidden">
+      <div className="hidden md:block border border-border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -213,6 +213,40 @@ export default async function RecepcionDetallePage({ params }: { params: Promise
           </tbody>
         </table>
       </div>
+
+      <ul className="md:hidden divide-y divide-border border border-border rounded-lg">
+        {items.map((it) => (
+          <li key={it.id} className="px-3 py-3 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium leading-tight">{it.productos?.nombre}</p>
+                <p className="text-xs text-muted-foreground font-mono mt-0.5">{it.productos?.sku}</p>
+              </div>
+              {it.discrepancia_tipo && <Badge variant="warning">{it.discrepancia_tipo}</Badge>}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Esperada</p>
+                <p>{it.cantidad_esperada ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Recibida</p>
+                <p className="font-medium">{Number(it.cantidad_recibida)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Costo</p>
+                <p>{it.costo_unitario != null ? formatMXN(Number(it.costo_unitario)) : '—'}</p>
+              </div>
+            </div>
+            {(it.zonas?.nombre || it.discrepancia) && (
+              <div className="text-xs text-muted-foreground space-y-0.5">
+                {it.zonas?.nombre && <p>Zona: {it.zonas.nombre}</p>}
+                {it.discrepancia && <p>{it.discrepancia}</p>}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
 
       {recepcion.notas && (
         <div className="mt-4 text-sm">

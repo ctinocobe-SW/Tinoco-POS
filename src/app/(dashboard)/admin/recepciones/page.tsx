@@ -84,7 +84,7 @@ export default async function AdminRecepcionesPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-heading font-semibold">Recepciones</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -93,7 +93,7 @@ export default async function AdminRecepcionesPage({
         </div>
         <Link
           href="/admin/facturas"
-          className="text-sm text-brand-accent hover:underline"
+          className="text-sm text-brand-accent hover:underline self-start sm:self-auto"
         >
           Ver facturas →
         </Link>

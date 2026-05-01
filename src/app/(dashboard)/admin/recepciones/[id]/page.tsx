@@ -84,12 +84,12 @@ export default async function AdminRecepcionDetallePage({
         Volver
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-heading font-semibold">Recepción</h1>
           <EstadoBadge estado={recepcion.estado} />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col-reverse sm:flex-row gap-2">
           {puedeCerrar && itemsParaCierre.length > 0 && (
             <CerrarRecepcionDialog
               recepcionId={recepcion.id}
@@ -101,7 +101,7 @@ export default async function AdminRecepcionDetallePage({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <DataRow label="Proveedor"     value={recepcion.proveedores?.nombre ?? '—'} />
         <DataRow label="Almacén"       value={recepcion.almacenes ? `${recepcion.almacenes.nombre} (${recepcion.almacenes.tipo})` : '—'} />
         <DataRow label="Fecha"         value={formatDate(recepcion.fecha)} />
@@ -129,7 +129,8 @@ export default async function AdminRecepcionDetallePage({
         />
       </div>
 
-      <div className="border border-border rounded-lg overflow-hidden">
+      {/* DESKTOP: tabla */}
+      <div className="hidden md:block border border-border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
@@ -176,6 +177,51 @@ export default async function AdminRecepcionDetallePage({
           </tbody>
         </table>
       </div>
+
+      {/* MOBILE: cards */}
+      <ul className="md:hidden divide-y divide-border border border-border rounded-lg">
+        {items.map((it) => {
+          const sub = it.costo_unitario != null
+            ? Number(it.costo_unitario) * Number(it.cantidad_recibida)
+            : null
+          return (
+            <li key={it.id} className="px-3 py-3 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium leading-tight">{it.productos?.nombre}</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">{it.productos?.sku}</p>
+                </div>
+                {it.discrepancia_tipo && <Badge variant="warning">{it.discrepancia_tipo}</Badge>}
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Esperada</p>
+                  <p>{it.cantidad_esperada ?? '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Recibida</p>
+                  <p className="font-medium">{Number(it.cantidad_recibida)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Costo</p>
+                  <p>{it.costo_unitario != null ? formatMXN(Number(it.costo_unitario)) : '—'}</p>
+                </div>
+              </div>
+              {(it.zonas?.nombre || it.discrepancia) && (
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  {it.zonas?.nombre && <p>Zona: {it.zonas.nombre}</p>}
+                  {it.discrepancia && <p>{it.discrepancia}</p>}
+                </div>
+              )}
+              {sub != null && (
+                <p className="text-xs text-right">
+                  Subtotal: <span className="font-medium">{formatMXN(sub)}</span>
+                </p>
+              )}
+            </li>
+          )
+        })}
+      </ul>
 
       {recepcion.notas && (
         <div className="mt-4 text-sm">

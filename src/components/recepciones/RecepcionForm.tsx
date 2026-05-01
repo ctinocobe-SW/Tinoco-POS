@@ -69,6 +69,12 @@ const DISCREPANCIA_LABELS: Record<DiscrepanciaTipo, string> = {
   devolucion: 'Devolución',
 }
 
+// Inputs grandes para captura de cantidades — pensado para tablet/celular en bodega
+const QTY_INPUT_CLASS =
+  'w-full text-center bg-white border border-border rounded-md px-3 h-11 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent'
+const FIELD_INPUT_CLASS =
+  'w-full bg-white border border-border rounded-md px-3 h-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent'
+
 export function RecepcionForm({
   almacenes,
   zonas,
@@ -76,7 +82,6 @@ export function RecepcionForm({
   defaultProveedor = null,
   initial,
   cancelHref = '/checador/recepciones',
-  successHref = '/checador/recepciones',
 }: RecepcionFormProps) {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
@@ -212,7 +217,7 @@ export function RecepcionForm({
       }
       toast.success(initial ? 'Recepción actualizada' : 'Recepción registrada')
       const id = (result as any).data?.id ?? initial?.recepcion_id
-      router.push(id ? `/checador/recepciones/${id}` : successHref)
+      router.push(id ? `/checador/recepciones/${id}` : cancelHref)
       router.refresh()
     } finally {
       setSubmitting(false)
@@ -222,10 +227,11 @@ export function RecepcionForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-4xl">
       {/* Encabezado */}
-      <div className="border border-border rounded-lg p-5 space-y-4">
+      <div className="border border-border rounded-lg p-4 sm:p-5 space-y-4">
         <h2 className="text-sm font-medium">Datos de la recepción</h2>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Proveedor */}
           <div className="space-y-1.5">
             <Label>Proveedor</Label>
             <div className="relative">
@@ -238,15 +244,15 @@ export function RecepcionForm({
                   if (!e.target.value) setValue('proveedor_id', undefined)
                 }}
                 placeholder="Buscar proveedor..."
-                className="w-full pl-8 pr-3 py-2 border border-border rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                className="w-full pl-9 pr-3 h-10 border border-border rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
               />
               {showProveedorDropdown && proveedoresResults.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-56 overflow-y-auto">
                   {proveedoresResults.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface"
+                      className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-surface"
                       onClick={() => handleSelectProveedor(p)}
                     >
                       <span className="font-medium">{p.nombre}</span>
@@ -289,7 +295,7 @@ export function RecepcionForm({
         {/* Datos de factura */}
         <div className="border-t border-border pt-4">
           <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Factura del proveedor</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="folio_factura">Folio</Label>
               <Input id="folio_factura" {...register('folio_factura')} placeholder="A-12345" />
@@ -323,30 +329,31 @@ export function RecepcionForm({
 
       {/* Productos */}
       <div className="border border-border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <h2 className="text-sm font-medium">Productos recibidos</h2>
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+          <h2 className="text-sm font-medium">Productos recibidos ({fields.length})</h2>
           {errors.items && (
             <p className="text-xs text-red-600">{errors.items.message ?? errors.items.root?.message}</p>
           )}
         </div>
 
+        {/* Buscador */}
         <div className="px-4 py-3 border-b border-border">
-          <div className="relative max-w-sm">
+          <div className="relative w-full sm:max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={productoQuery}
               onChange={(e) => setProductoQuery(e.target.value)}
               placeholder="Agregar producto por nombre o SKU..."
-              className="w-full pl-8 pr-3 py-2 border border-border rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand-accent"
+              className="w-full pl-9 pr-3 h-10 border border-border rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
             />
             {showProductoDropdown && productosResults.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-56 overflow-y-auto">
                 {productosResults.map((p: any) => (
                   <button
                     key={p.id}
                     type="button"
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface"
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-surface"
                     onClick={() => handleSelectProducto(p)}
                   >
                     <span className="font-mono text-xs text-muted-foreground mr-2">{p.sku}</span>
@@ -358,149 +365,272 @@ export function RecepcionForm({
           </div>
         </div>
 
-        {fields.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
-                  <th className="px-3 py-2 text-left">Producto</th>
-                  <th className="px-3 py-2 text-center w-24">Esperada</th>
-                  <th className="px-3 py-2 text-center w-24">Recibida *</th>
-                  <th className="px-3 py-2 text-center w-32">Caducidad</th>
-                  <th className="px-3 py-2 text-left w-32">Discrepancia</th>
-                  <th className="px-3 py-2 text-left w-36">Zona</th>
-                  <th className="px-3 py-2 w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {fields.map((field, index) => {
-                  const meta = productosMeta.get(watchedItems[index]?.producto_id ?? '')
-                  const esperada = watchedItems[index]?.cantidad_esperada
-                  const recibida = watchedItems[index]?.cantidad_recibida
-                  const muestraDiff =
-                    esperada != null &&
-                    !Number.isNaN(Number(esperada)) &&
-                    Number(esperada) !== Number(recibida)
-                  return (
-                    <tr key={field.id} className="border-b border-border last:border-0 align-top">
-                      <td className="px-3 py-2">
-                        {meta ? (
-                          <div>
-                            <p className="font-medium">{meta.nombre}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{meta.sku}</p>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
+        {fields.length === 0 ? (
+          <div className="px-4 py-10 text-center text-muted-foreground text-sm">
+            Busca y agrega productos arriba
+          </div>
+        ) : (
+          <>
+            {/* DESKTOP: tabla con inputs grandes */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-brand-surface text-xs text-muted-foreground uppercase tracking-wide">
+                    <th className="px-3 py-2 text-left">Producto</th>
+                    <th className="px-3 py-2 text-center w-28">Esperada</th>
+                    <th className="px-3 py-2 text-center w-28">Recibida *</th>
+                    <th className="px-3 py-2 text-center w-36">Caducidad</th>
+                    <th className="px-3 py-2 text-left w-44">Discrepancia</th>
+                    <th className="px-3 py-2 text-left w-40">Zona</th>
+                    <th className="px-3 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fields.map((field, index) => {
+                    const meta = productosMeta.get(watchedItems[index]?.producto_id ?? '')
+                    const esperada = watchedItems[index]?.cantidad_esperada
+                    const recibida = watchedItems[index]?.cantidad_recibida
+                    const muestraDiff =
+                      esperada != null &&
+                      !Number.isNaN(Number(esperada)) &&
+                      Number(esperada) !== Number(recibida)
+                    return (
+                      <tr key={field.id} className="border-b border-border last:border-0 align-top">
+                        <td className="px-3 py-3">
+                          {meta ? (
+                            <div>
+                              <p className="font-medium">{meta.nombre}</p>
+                              <p className="text-xs text-muted-foreground font-mono">{meta.sku}</p>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-3">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            inputMode="decimal"
+                            onWheel={blurOnWheel}
+                            {...register(`items.${index}.cantidad_esperada`, { valueAsNumber: true })}
+                            placeholder="—"
+                            className={QTY_INPUT_CLASS}
+                          />
+                        </td>
+                        <td className="px-2 py-3">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            inputMode="decimal"
+                            onWheel={blurOnWheel}
+                            {...register(`items.${index}.cantidad_recibida`, { valueAsNumber: true })}
+                            className={`${QTY_INPUT_CLASS} ${
+                              muestraDiff ? '!border-amber-400 !bg-amber-50' : ''
+                            }`}
+                          />
+                          {errors.items?.[index]?.cantidad_recibida && (
+                            <p className="text-xs text-red-600 mt-1">
+                              {errors.items[index]?.cantidad_recibida?.message}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-2 py-3">
+                          {meta?.requiere_caducidad ? (
+                            <input
+                              type="date"
+                              {...register(`items.${index}.fecha_caducidad`)}
+                              className={FIELD_INPUT_CLASS}
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-3 space-y-1.5">
+                          <select
+                            {...register(`items.${index}.discrepancia_tipo`)}
+                            className={FIELD_INPUT_CLASS}
+                          >
+                            <option value="">—</option>
+                            {DISCREPANCIA_TIPOS.map((tipo) => (
+                              <option key={tipo} value={tipo}>{DISCREPANCIA_LABELS[tipo]}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            {...register(`items.${index}.discrepancia`)}
+                            placeholder="Nota..."
+                            className={`${FIELD_INPUT_CLASS} text-xs`}
+                          />
+                        </td>
+                        <td className="px-2 py-3">
+                          {zonasDelAlmacen.length > 0 ? (
+                            <select
+                              {...register(`items.${index}.zona_id`)}
+                              className={FIELD_INPUT_CLASS}
+                            >
+                              <option value="">Sin zona</option>
+                              {zonasDelAlmacen.map((z) => (
+                                <option key={z.id} value={z.id}>
+                                  {z.nombre}{z.despachador_nombre ? ` (${z.despachador_nombre})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => remove(index)}
+                            className="text-muted-foreground hover:text-red-600 transition-colors p-2"
+                            aria-label="Eliminar"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* MOBILE: cada item como tarjeta */}
+            <ul className="md:hidden divide-y divide-border">
+              {fields.map((field, index) => {
+                const meta = productosMeta.get(watchedItems[index]?.producto_id ?? '')
+                const esperada = watchedItems[index]?.cantidad_esperada
+                const recibida = watchedItems[index]?.cantidad_recibida
+                const muestraDiff =
+                  esperada != null &&
+                  !Number.isNaN(Number(esperada)) &&
+                  Number(esperada) !== Number(recibida)
+                return (
+                  <li key={field.id} className="px-4 py-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium leading-tight">{meta?.nombre ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{meta?.sku}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="text-muted-foreground hover:text-red-600 p-2 -m-2"
+                        aria-label="Eliminar"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Esperada</Label>
                         <input
                           type="number"
                           step="0.1"
                           min="0"
+                          inputMode="decimal"
                           onWheel={blurOnWheel}
                           {...register(`items.${index}.cantidad_esperada`, { valueAsNumber: true })}
                           placeholder="—"
-                          className="w-full text-center bg-white border border-border rounded px-2 py-1 text-sm"
+                          className={QTY_INPUT_CLASS}
                         />
-                      </td>
-                      <td className="px-3 py-2">
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Recibida *</Label>
                         <input
                           type="number"
                           step="0.1"
                           min="0"
+                          inputMode="decimal"
                           onWheel={blurOnWheel}
                           {...register(`items.${index}.cantidad_recibida`, { valueAsNumber: true })}
-                          className={`w-full text-center bg-white border rounded px-2 py-1 text-sm ${
-                            muestraDiff ? 'border-amber-400 bg-amber-50' : 'border-border'
+                          className={`${QTY_INPUT_CLASS} ${
+                            muestraDiff ? '!border-amber-400 !bg-amber-50' : ''
                           }`}
                         />
                         {errors.items?.[index]?.cantidad_recibida && (
-                          <p className="text-xs text-red-600 mt-0.5">
+                          <p className="text-xs text-red-600 mt-1">
                             {errors.items[index]?.cantidad_recibida?.message}
                           </p>
                         )}
-                      </td>
-                      <td className="px-3 py-2">
-                        {meta?.requiere_caducidad ? (
-                          <input
-                            type="date"
-                            {...register(`items.${index}.fecha_caducidad`)}
-                            className="w-full bg-white border border-border rounded px-2 py-1 text-sm"
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">N/A</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
+                      </div>
+                    </div>
+
+                    {meta?.requiere_caducidad && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Caducidad</Label>
+                        <input
+                          type="date"
+                          {...register(`items.${index}.fecha_caducidad`)}
+                          className={FIELD_INPUT_CLASS}
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <Label className="text-xs">Discrepancia</Label>
+                      <select
+                        {...register(`items.${index}.discrepancia_tipo`)}
+                        className={FIELD_INPUT_CLASS}
+                      >
+                        <option value="">— Sin discrepancia —</option>
+                        {DISCREPANCIA_TIPOS.map((tipo) => (
+                          <option key={tipo} value={tipo}>{DISCREPANCIA_LABELS[tipo]}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        {...register(`items.${index}.discrepancia`)}
+                        placeholder="Nota sobre la discrepancia..."
+                        className={FIELD_INPUT_CLASS}
+                      />
+                    </div>
+
+                    {zonasDelAlmacen.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Zona</Label>
                         <select
-                          {...register(`items.${index}.discrepancia_tipo`)}
-                          className="w-full bg-white border border-border rounded px-2 py-1 text-sm"
+                          {...register(`items.${index}.zona_id`)}
+                          className={FIELD_INPUT_CLASS}
                         >
-                          <option value="">—</option>
-                          {DISCREPANCIA_TIPOS.map((tipo) => (
-                            <option key={tipo} value={tipo}>
-                              {DISCREPANCIA_LABELS[tipo]}
+                          <option value="">Sin zona</option>
+                          {zonasDelAlmacen.map((z) => (
+                            <option key={z.id} value={z.id}>
+                              {z.nombre}{z.despachador_nombre ? ` (${z.despachador_nombre})` : ''}
                             </option>
                           ))}
                         </select>
-                        <input
-                          type="text"
-                          {...register(`items.${index}.discrepancia`)}
-                          placeholder="Nota..."
-                          className="w-full mt-1 bg-white border border-border rounded px-2 py-1 text-xs"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        {zonasDelAlmacen.length > 0 ? (
-                          <select
-                            {...register(`items.${index}.zona_id`)}
-                            className="w-full bg-white border border-border rounded px-2 py-1 text-sm"
-                          >
-                            <option value="">Sin zona</option>
-                            {zonasDelAlmacen.map((z) => (
-                              <option key={z.id} value={z.id}>
-                                {z.nombre}{z.despachador_nombre ? ` (${z.despachador_nombre})` : ''}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => remove(index)}
-                          className="text-muted-foreground hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-            Busca y agrega productos arriba
-          </div>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </>
         )}
       </div>
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={submitting || fields.length === 0}>
-          {submitting ? 'Guardando...' : initial ? 'Guardar cambios' : 'Guardar recepción'}
-        </Button>
+      {/* Acciones — sticky en móvil para que siempre se vea */}
+      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sticky bottom-0 bg-brand-bg pt-3 pb-2">
         <Button
           type="button"
           variant="outline"
           onClick={() => router.push(cancelHref)}
           disabled={submitting}
+          className="w-full sm:w-auto"
         >
           Cancelar
+        </Button>
+        <Button
+          type="submit"
+          disabled={submitting || fields.length === 0}
+          className="w-full sm:w-auto"
+        >
+          {submitting ? 'Guardando...' : initial ? 'Guardar cambios' : 'Guardar recepción'}
         </Button>
       </div>
     </form>

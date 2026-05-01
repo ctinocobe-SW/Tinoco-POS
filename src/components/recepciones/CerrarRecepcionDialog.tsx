@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Lock } from 'lucide-react'
 import { Dialog } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { cerrarRecepcion } from '@/lib/actions/recepciones'
 import { blurOnWheel } from '@/lib/utils/input-handlers'
 import { formatMXN } from '@/lib/utils/format'
@@ -25,6 +24,9 @@ interface CerrarRecepcionDialogProps {
   items: ItemCierre[]
   montoFactura: number | null
 }
+
+const COSTO_INPUT_CLASS =
+  'w-full text-right bg-white border border-border rounded-md px-3 h-11 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent'
 
 export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: CerrarRecepcionDialogProps) {
   const router = useRouter()
@@ -79,9 +81,12 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
     })
   }
 
+  const diferenciaFactura = montoFactura != null ? Math.abs(total - montoFactura) : 0
+  const cuadra = montoFactura == null || diferenciaFactura <= 0.01
+
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button onClick={() => setOpen(true)} className="w-full sm:w-auto">
         <Lock size={14} className="mr-1.5" />
         Cerrar y aplicar a inventario
       </Button>
@@ -90,20 +95,21 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
         open={open}
         onClose={() => !pending && setOpen(false)}
         title="Cerrar recepción"
-        className="max-w-2xl"
+        className="max-w-3xl max-h-[90vh] overflow-y-auto"
       >
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Captura el costo unitario de cada producto. Al cerrar, las cantidades del checador se aplican al inventario.
+            Captura el costo unitario de cada producto. Las cantidades del checador se aplicarán al inventario.
           </p>
 
-          <div className="border border-border rounded-md overflow-hidden">
+          {/* DESKTOP: tabla */}
+          <div className="hidden sm:block border border-border rounded-md overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-brand-surface text-xs uppercase tracking-wide text-muted-foreground border-b border-border">
                   <th className="text-left px-3 py-2">Producto</th>
                   <th className="text-center px-3 py-2 w-24">Cantidad</th>
-                  <th className="text-right px-3 py-2 w-32">Costo unit.</th>
+                  <th className="text-right px-3 py-2 w-36">Costo unit.</th>
                   <th className="text-right px-3 py-2 w-28">Subtotal</th>
                 </tr>
               </thead>
@@ -117,16 +123,17 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
                         <p className="font-medium">{it.producto_nombre}</p>
                         <p className="text-xs text-muted-foreground font-mono">{it.sku}</p>
                       </td>
-                      <td className="px-3 py-2 text-center">{Number(it.cantidad_recibida)}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-center font-medium">{Number(it.cantidad_recibida)}</td>
+                      <td className="px-2 py-2">
                         <input
                           type="number"
                           step="0.01"
                           min="0"
+                          inputMode="decimal"
                           onWheel={blurOnWheel}
                           value={costos[it.id] ?? ''}
                           onChange={(e) => setCostos((prev) => ({ ...prev, [it.id]: e.target.value }))}
-                          className="w-full text-right bg-white border border-border rounded px-2 py-1 text-sm"
+                          className={COSTO_INPUT_CLASS}
                         />
                       </td>
                       <td className="px-3 py-2 text-right text-xs">{formatMXN(sub)}</td>
@@ -134,43 +141,83 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
                   )
                 })}
               </tbody>
-              <tfoot>
-                <tr className="bg-brand-surface">
-                  <td colSpan={3} className="px-3 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground">
-                    Total calculado
-                  </td>
-                  <td className="px-3 py-2 text-right font-medium">{formatMXN(total)}</td>
-                </tr>
-                {montoFactura != null && (
-                  <tr className="bg-brand-surface">
-                    <td colSpan={3} className="px-3 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground">
-                      Monto factura
-                    </td>
-                    <td className={`px-3 py-2 text-right font-medium ${
-                      Math.abs(total - montoFactura) > 0.01 ? 'text-amber-600' : 'text-emerald-700'
-                    }`}>
-                      {formatMXN(montoFactura)}
-                    </td>
-                  </tr>
-                )}
-              </tfoot>
             </table>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
+          {/* MOBILE: cards */}
+          <ul className="sm:hidden divide-y divide-border border border-border rounded-md">
+            {items.map((it) => {
+              const costo = parseFloat(costos[it.id] ?? '0')
+              const sub = Number.isFinite(costo) ? costo * Number(it.cantidad_recibida) : 0
+              return (
+                <li key={it.id} className="px-3 py-3 space-y-2">
+                  <div>
+                    <p className="font-medium leading-tight">{it.producto_nombre}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{it.sku}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 items-end">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Cantidad</p>
+                      <p className="text-base font-medium">{Number(it.cantidad_recibida)}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Costo unitario</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputMode="decimal"
+                        onWheel={blurOnWheel}
+                        value={costos[it.id] ?? ''}
+                        onChange={(e) => setCostos((prev) => ({ ...prev, [it.id]: e.target.value }))}
+                        className={COSTO_INPUT_CLASS}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-right text-muted-foreground">
+                    Subtotal: <span className="text-foreground font-medium">{formatMXN(sub)}</span>
+                  </p>
+                </li>
+              )
+            })}
+          </ul>
+
+          {/* Totales */}
+          <div className="border border-border rounded-md p-3 bg-brand-surface space-y-1.5">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total calculado</span>
+              <span className="font-medium">{formatMXN(total)}</span>
+            </div>
+            {montoFactura != null && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Monto factura</span>
+                <span className={`font-medium ${cuadra ? 'text-emerald-700' : 'text-amber-600'}`}>
+                  {formatMXN(montoFactura)}
+                  {!cuadra && (
+                    <span className="text-xs ml-2">
+                      (Δ {formatMXN(total - montoFactura)})
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
               checked={actualizarCosto}
               onChange={(e) => setActualizarCosto(e.target.checked)}
+              className="mt-0.5"
             />
-            Actualizar último costo en el catálogo de productos
+            <span>Actualizar último costo en el catálogo de productos</span>
           </label>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={pending} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleCerrar} disabled={pending}>
+            <Button onClick={handleCerrar} disabled={pending} className="w-full sm:w-auto">
               {pending ? 'Cerrando...' : 'Cerrar y aplicar'}
             </Button>
           </div>
