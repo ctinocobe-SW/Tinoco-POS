@@ -270,7 +270,10 @@ export async function marcarRecibida(recepcionId: string) {
 
 // ──────────────────────────────────────────────────────────────
 // Cerrar recepción (solo admin). Captura costos y aplica al inventario.
-// La cantidad que entra al inventario es cantidad_recibida (la del checador).
+// Delegates to the cerrar_recepcion PostgreSQL function so that the entire
+// operation — cost persistence, inventory upsert, movement record, and state
+// transition — runs inside a single database transaction (atomic).
+// Inventory is updated BEFORE the movement record is inserted (Critical 2 fix).
 // ──────────────────────────────────────────────────────────────
 export async function cerrarRecepcion(input: CerrarRecepcionInput) {
   const { profile, supabase } = await getAuthenticatedProfile()
@@ -286,128 +289,19 @@ export async function cerrarRecepcion(input: CerrarRecepcionInput) {
 
   const { recepcion_id, costos, actualizar_costo_producto } = parsed.data
 
-  const { data: recepcion, error: fetchError } = await supabase
-    .from('recepciones')
-    .select('id, estado, almacen_id')
-    .eq('id', recepcion_id)
-    .single<{ id: string; estado: string; almacen_id: string }>()
+  const { error: rpcError } = await supabase.rpc('cerrar_recepcion', {
+    p_recepcion_id: recepcion_id,
+    p_costos: costos,
+    p_actualizar_costo_producto: actualizar_costo_producto,
+    p_cerrado_por: profile.id,
+  })
 
-  if (fetchError || !recepcion) {
-    return { error: 'Recepción no encontrada' }
+  if (rpcError) {
+    const msg = rpcError.message ?? ''
+    if (msg.includes('Solo se pueden cerrar')) return { error: 'Solo se pueden cerrar recepciones recibidas por el checador' }
+    if (msg.includes('Faltan costos')) return { error: 'Captura el costo de todos los productos antes de cerrar' }
+    return { error: msg || 'Error al cerrar la recepción' }
   }
-
-  if (!['recibida', 'con_discrepancias'].includes(recepcion.estado)) {
-    return { error: 'Solo se pueden cerrar recepciones recibidas por el checador' }
-  }
-
-  const { data: items, error: itemsError } = await supabase
-    .from('recepcion_items')
-    .select('id, producto_id, cantidad_recibida')
-    .eq('recepcion_id', recepcion_id)
-
-  if (itemsError || !items || items.length === 0) {
-    return { error: 'No hay productos en esta recepción' }
-  }
-
-  const itemsArr = items as { id: string; producto_id: string; cantidad_recibida: number }[]
-
-  // Validar que vengan costos para todos los items
-  const costosMap = new Map(costos.map((c) => [c.item_id, c.costo_unitario]))
-  for (const it of itemsArr) {
-    if (!costosMap.has(it.id)) {
-      return { error: 'Captura el costo de todos los productos antes de cerrar' }
-    }
-  }
-
-  // 1) Actualizar costo_unitario en cada item
-  for (const it of itemsArr) {
-    const costo = costosMap.get(it.id)!
-    const { error: cErr } = await supabase
-      .from('recepcion_items')
-      .update({ costo_unitario: costo })
-      .eq('id', it.id)
-    if (cErr) return { error: `Error al guardar costos: ${cErr.message}` }
-  }
-
-  // 2) Aplicar al inventario: movimiento + upsert
-  for (const it of itemsArr) {
-    if (Number(it.cantidad_recibida) <= 0) continue // no mover si no se recibió nada
-
-    const { error: movError } = await supabase
-      .from('movimientos_inventario')
-      .insert({
-        id: crypto.randomUUID(),
-        producto_id: it.producto_id,
-        almacen_id: recepcion.almacen_id,
-        tipo: 'entrada',
-        cantidad: it.cantidad_recibida,
-        referencia_tipo: 'recepcion',
-        referencia_id: recepcion_id,
-        usuario_id: profile.id,
-        notas: null,
-      })
-
-    if (movError) {
-      return { error: `Error al registrar movimiento: ${movError.message}` }
-    }
-
-    const { data: invExistente } = await supabase
-      .from('inventario')
-      .select('id, stock_actual')
-      .eq('producto_id', it.producto_id)
-      .eq('almacen_id', recepcion.almacen_id)
-      .maybeSingle()
-
-    if (invExistente) {
-      const { error: invError } = await supabase
-        .from('inventario')
-        .update({
-          stock_actual: Number((invExistente as any).stock_actual) + Number(it.cantidad_recibida),
-        })
-        .eq('id', (invExistente as any).id)
-      if (invError) return { error: `Error al actualizar inventario: ${invError.message}` }
-    } else {
-      const { error: invError } = await supabase
-        .from('inventario')
-        .insert({
-          id: crypto.randomUUID(),
-          producto_id: it.producto_id,
-          almacen_id: recepcion.almacen_id,
-          stock_actual: Number(it.cantidad_recibida),
-          stock_minimo: 0,
-        })
-      if (invError) return { error: `Error al crear inventario: ${invError.message}` }
-    }
-
-    // 3) Actualizar último costo del producto si así se solicitó
-    if (actualizar_costo_producto) {
-      const costo = costosMap.get(it.id)!
-      if (costo > 0) {
-        const { error: prodErr } = await supabase
-          .from('productos')
-          .update({ costo, updated_at: new Date().toISOString() })
-          .eq('id', it.producto_id)
-        if (prodErr) {
-          return { error: `Error al actualizar costo del producto: ${prodErr.message}` }
-        }
-      }
-    }
-  }
-
-  // 4) Marcar recepción como cerrada
-  const { error: cerrarErr } = await supabase
-    .from('recepciones')
-    .update({
-      estado: 'cerrada',
-      cerrado_at: new Date().toISOString(),
-      cerrado_por: profile.id,
-      // legacy
-      confirmado: true,
-      confirmado_at: new Date().toISOString(),
-    } as any)
-    .eq('id', recepcion_id)
-
-  if (cerrarErr) return { error: cerrarErr.message }
 
   revalidatePath('/admin/recepciones')
   revalidatePath(`/admin/recepciones/${recepcion_id}`)
