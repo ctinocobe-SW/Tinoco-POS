@@ -36,8 +36,8 @@ export default async function RecepcionDetallePage({ params }: { params: Promise
       checador_id, recibido_at, cerrado_at,
       proveedores(id, nombre, rfc),
       almacenes(id, nombre, tipo),
-      responsable:profiles!recepciones_despachador_responsable_id_fkey(id, nombre),
-      checador:profiles!recepciones_checador_id_fkey(id, nombre)
+      responsable:profiles!recepciones_responsable_fk(id, nombre),
+      checador:profiles!recepciones_checador_fk(id, nombre)
     `)
     .eq('id', id)
     .single<any>()

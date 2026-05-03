@@ -26,7 +26,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   const { data: ticket } = await supabase
     .from('tickets')
-    .select('id, folio, estado, subtotal, iva, ieps, descuento, total, notas, motivo_rechazo, created_at, es_credito, credito_id, facturado, cfdi_uuid, clientes(nombre, rfc, telefono), profiles!tickets_despachador_id_fkey(nombre)')
+    .select('id, folio, estado, subtotal, iva, ieps, descuento, total, notas, motivo_rechazo, created_at, es_credito, credito_id, facturado, cfdi_uuid, clientes(nombre, rfc, telefono), profiles!tickets_despachador_fk(nombre)')
     .eq('id', params.id)
     .single()
 

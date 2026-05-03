@@ -28,8 +28,8 @@ export default async function AdminTicketsPage() {
     .select(`
       id, folio, estado, total, notas, created_at, aprobado_at, verificado_at, despachado_at, cobro_pendiente,
       clientes(nombre, rfc),
-      despachador:profiles!tickets_despachador_id_fkey(nombre),
-      checador:profiles!tickets_checador_id_fkey(nombre)
+      despachador:profiles!tickets_despachador_fk(nombre),
+      checador:profiles!tickets_checador_fk(nombre)
     `)
     .in('estado', ACTIVE_ESTADOS)
     .order('created_at', { ascending: false })

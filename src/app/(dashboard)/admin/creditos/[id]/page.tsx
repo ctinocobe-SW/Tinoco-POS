@@ -24,7 +24,7 @@ export default async function CreditoDetallePage({ params }: { params: { id: str
       tickets(id, folio, total, created_at,
         ticket_items(cantidad, precio_unitario, subtotal, productos(sku, nombre))
       ),
-      profiles!creditos_otorgado_por_fkey(nombre)
+      profiles!creditos_otorgado_por_fk(nombre)
     `)
     .eq('id', params.id)
     .single()
@@ -33,7 +33,7 @@ export default async function CreditoDetallePage({ params }: { params: { id: str
 
   const { data: abonos } = await supabase
     .from('abonos_credito')
-    .select('id, monto, fecha, metodo_pago, referencia, notas, created_at, profiles!abonos_credito_registrado_por_fkey(nombre)')
+    .select('id, monto, fecha, metodo_pago, referencia, notas, created_at, profiles!abonos_credito_registrado_por_fk(nombre)')
     .eq('credito_id', params.id)
     .order('fecha', { ascending: false })
 

@@ -36,9 +36,9 @@ export default async function AdminRecepcionDetallePage({
       estado, notas, recibido_at, cerrado_at,
       proveedores(nombre, rfc),
       almacenes(nombre, tipo),
-      checador:profiles!recepciones_checador_id_fkey(nombre),
-      responsable:profiles!recepciones_despachador_responsable_id_fkey(nombre),
-      cierre:profiles!recepciones_cerrado_por_fkey(nombre)
+      checador:profiles!recepciones_checador_fk(nombre),
+      responsable:profiles!recepciones_responsable_fk(nombre),
+      cierre:profiles!recepciones_cierre_fk(nombre)
     `)
     .eq('id', id)
     .single<any>()

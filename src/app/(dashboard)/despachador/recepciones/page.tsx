@@ -27,7 +27,7 @@ export default async function DespachadorRecepcionesPage() {
     .select(`
       id, fecha, estado, folio_factura,
       proveedores(nombre), almacenes(nombre, tipo),
-      checador:profiles!recepciones_checador_id_fkey(nombre)
+      checador:profiles!recepciones_checador_fk(nombre)
     `)
     .eq('despachador_responsable_id', user.id)
     .order('created_at', { ascending: false })
