@@ -217,7 +217,7 @@ export function RecepcionForm({
       }
       toast.success(initial ? 'Recepción actualizada' : 'Recepción registrada')
       const id = (result as any).data?.id ?? initial?.recepcion_id
-      router.push(id ? `/checador/recepciones/${id}` : cancelHref)
+      router.push(id ? `${cancelHref}/${id}` : cancelHref)
       router.refresh()
     } finally {
       setSubmitting(false)

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { RecepcionCard, type RecepcionResumen } from '@/components/recepciones/RecepcionCard'
 
 export const metadata = { title: 'Recepciones — POS TINOCO' }
@@ -91,12 +93,20 @@ export default async function AdminRecepcionesPage({
             Revisa, captura costos y cierra para aplicar al inventario
           </p>
         </div>
-        <Link
-          href="/admin/facturas"
-          className="text-sm text-brand-accent hover:underline self-start sm:self-auto"
-        >
-          Ver facturas →
-        </Link>
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 self-start sm:self-auto">
+          <Link
+            href="/admin/facturas"
+            className="text-sm text-brand-accent hover:underline"
+          >
+            Ver facturas →
+          </Link>
+          <Link href="/admin/recepciones/nueva" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
+              <Plus size={16} className="mr-1.5" />
+              Nueva recepción
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">

@@ -5,7 +5,8 @@ import { ArrowLeft } from 'lucide-react'
 import { EstadoBadge } from '@/components/recepciones/EstadoBadge'
 import { FacturaUploader } from '@/components/recepciones/FacturaUploader'
 import { CerrarRecepcionDialog } from '@/components/recepciones/CerrarRecepcionDialog'
-import { CancelarRecepcionButton } from '@/components/recepciones/MarcarRecibidaButton'
+import { MarcarRecibidaButton, CancelarRecepcionButton } from '@/components/recepciones/MarcarRecibidaButton'
+import { RecepcionForm } from '@/components/recepciones/RecepcionForm'
 import { Badge } from '@/components/ui/badge'
 import { formatDate, formatDateTime, formatMXN } from '@/lib/utils/format'
 
@@ -34,7 +35,8 @@ export default async function AdminRecepcionDetallePage({
     .select(`
       id, fecha, fecha_factura, folio_factura, monto_factura, factura_url,
       estado, notas, recibido_at, cerrado_at,
-      proveedores(nombre, rfc),
+      proveedor_id, almacen_id, despachador_responsable_id,
+      proveedores(id, nombre, rfc),
       almacenes(nombre, tipo),
       checador:profiles!recepciones_checador_fk(nombre),
       responsable:profiles!recepciones_responsable_fk(nombre),
@@ -49,14 +51,93 @@ export default async function AdminRecepcionDetallePage({
     .from('recepcion_items')
     .select(`
       id, producto_id, cantidad_esperada, cantidad_recibida, fecha_caducidad,
-      discrepancia_tipo, discrepancia, costo_unitario,
-      productos(sku, nombre, costo),
+      discrepancia_tipo, discrepancia, costo_unitario, zona_id,
+      productos(sku, nombre, costo, requiere_caducidad),
       zonas(nombre)
     `)
     .eq('recepcion_id', id)
     .order('id')
 
   const items = (itemsData ?? []) as any[]
+
+  // ── Branch editable: el admin también puede capturar/editar cuando la
+  //    recepción está en borrador (mismo flujo que el checador).
+  if (recepcion.estado === 'borrador') {
+    const [almacenesRes, zonasRes, despachadoresRes] = await Promise.all([
+      supabase.from('almacenes').select('id, nombre, tipo').eq('activo', true).order('nombre'),
+      supabase.from('zonas').select('id, nombre, almacen_id, profiles(nombre)').eq('activo', true).order('nombre'),
+      supabase.from('profiles').select('id, nombre').eq('rol', 'despachador').eq('activo', true).order('nombre'),
+    ])
+
+    const almacenes = (almacenesRes.data ?? []) as { id: string; nombre: string; tipo: string }[]
+    const zonas = (zonasRes.data ?? []).map((z: any) => ({
+      id: z.id, nombre: z.nombre, almacen_id: z.almacen_id,
+      despachador_nombre: z.profiles?.nombre ?? null,
+    }))
+    const despachadores = (despachadoresRes.data ?? []) as { id: string; nombre: string }[]
+
+    return (
+      <div>
+        <Link href="/admin/recepciones" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6">
+          <ArrowLeft size={14} />
+          Volver
+        </Link>
+
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-2xl font-heading font-semibold">Recepción</h1>
+          <EstadoBadge estado={recepcion.estado} />
+        </div>
+        <p className="text-sm text-muted-foreground mb-6">
+          Borrador. Termina la captura y márcala como recibida para poder cerrarla y aplicar al inventario.
+        </p>
+
+        <div className="mb-6 border border-border rounded-lg p-4">
+          <h2 className="text-sm font-medium mb-2">Factura del proveedor</h2>
+          <FacturaUploader recepcionId={recepcion.id} facturaUrl={recepcion.factura_url} />
+        </div>
+
+        <RecepcionForm
+          almacenes={almacenes}
+          zonas={zonas}
+          despachadores={despachadores}
+          cancelHref="/admin/recepciones"
+          defaultProveedor={
+            recepcion.proveedores
+              ? { id: recepcion.proveedores.id, nombre: recepcion.proveedores.nombre, rfc: recepcion.proveedores.rfc }
+              : null
+          }
+          initial={{
+            recepcion_id: recepcion.id,
+            proveedor_id: recepcion.proveedor_id,
+            almacen_id: recepcion.almacen_id,
+            despachador_responsable_id: recepcion.despachador_responsable_id,
+            fecha: recepcion.fecha,
+            fecha_factura: recepcion.fecha_factura,
+            folio_factura: recepcion.folio_factura,
+            monto_factura: recepcion.monto_factura,
+            notas: recepcion.notas,
+            items: items.map((it) => ({
+              producto_id: it.producto_id,
+              sku: it.productos?.sku ?? '',
+              nombre: it.productos?.nombre ?? '',
+              requiere_caducidad: it.productos?.requiere_caducidad ?? false,
+              cantidad_esperada: it.cantidad_esperada,
+              cantidad_recibida: Number(it.cantidad_recibida),
+              fecha_caducidad: it.fecha_caducidad,
+              discrepancia_tipo: it.discrepancia_tipo,
+              discrepancia: it.discrepancia,
+              zona_id: it.zona_id,
+            })),
+          }}
+        />
+
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2 sticky bottom-0 bg-brand-bg pt-3 pb-2">
+          <CancelarRecepcionButton recepcionId={recepcion.id} estado={recepcion.estado} />
+          <MarcarRecibidaButton recepcionId={recepcion.id} />
+        </div>
+      </div>
+    )
+  }
 
   const puedeCerrar = recepcion.estado === 'recibida' || recepcion.estado === 'con_discrepancias'
 
