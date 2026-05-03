@@ -17,21 +17,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const profile = data as any
   if (!profile || !profile.activo) redirect('/login')
 
-  // Badge de créditos vencidos solo para admin
+  // Badges para admin: créditos vencidos y recepciones pendientes de cierre
   let creditosVencidos = 0
+  let recepcionesPendientes = 0
   if (profile.rol === 'admin') {
-    const { count } = await supabase
-      .from('creditos')
-      .select('*', { count: 'exact', head: true })
-      .eq('estado', 'vencido')
-      .gt('saldo', 0)
-    creditosVencidos = count ?? 0
+    const [creditos, recepciones] = await Promise.all([
+      supabase
+        .from('creditos')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'vencido')
+        .gt('saldo', 0),
+      supabase
+        .from('recepciones')
+        .select('*', { count: 'exact', head: true })
+        .in('estado', ['recibida', 'con_discrepancias']),
+    ])
+    creditosVencidos = creditos.count ?? 0
+    recepcionesPendientes = recepciones.count ?? 0
   }
 
   return (
     <ShellClient
       profile={{ nombre: profile.nombre, rol: profile.rol as UserRole, email: profile.email }}
-      badges={{ creditosVencidos }}
+      badges={{ creditosVencidos, recepcionesPendientes }}
     >
       {children}
     </ShellClient>

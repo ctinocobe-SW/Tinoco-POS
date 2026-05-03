@@ -61,6 +61,7 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
       piezas_por_bulto: undefined,
       unidad_precio_base: undefined,
       unidad_precio_mayoreo: undefined,
+      unidad_inventario_principal: 'pza',
       requiere_caducidad: false,
       fecha_caducidad: undefined,
       stock_inicial: 0,
@@ -79,8 +80,16 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
 
   const categoriaSeleccionada = watch('categoria')
   const stockInicial = watch('stock_inicial') ?? 0
+  const vendePza = watch('vende_pza')
+  const vendeKg = watch('vende_kg')
   const vendeCaja = watch('vende_caja')
   const vendeBulto = watch('vende_bulto')
+  const unidadesDisponibles = ([
+    vendePza ? 'pza' : null,
+    vendeKg ? 'kg' : null,
+    vendeCaja ? 'caja' : null,
+    vendeBulto ? 'bulto' : null,
+  ].filter(Boolean) as ('pza' | 'kg' | 'caja' | 'bulto')[])
   const requiereCaducidad = watch('requiere_caducidad')
   const tasaIva = watch('tasa_iva') ?? 0.16
   const tasaIeps = watch('tasa_ieps') ?? 0
@@ -382,6 +391,25 @@ export function ProductoForm({ productoId, defaultValues, almacenes = [], provee
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Inventario y proveedor */}
+      <div className="border border-border rounded-lg p-5 space-y-4">
+        <h2 className="text-sm font-medium">Inventario</h2>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="unidad_inventario_principal">Unidad principal del inventario</Label>
+          <Select id="unidad_inventario_principal" {...register('unidad_inventario_principal')} className="max-w-xs">
+            {(unidadesDisponibles.length > 0 ? unidadesDisponibles : ['pza','kg','caja','bulto'] as const).map((u) => (
+              <option key={u} value={u}>
+                {u === 'pza' ? 'Por pieza' : u === 'kg' ? 'Por kilogramo' : u === 'caja' ? 'Por caja' : 'Por bulto'}
+              </option>
+            ))}
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Unidad usada para mínimos, máximos y alertas. Ej: si vendes Golden por caja y kg, deja "caja".
+          </p>
         </div>
       </div>
 

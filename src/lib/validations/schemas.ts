@@ -48,6 +48,7 @@ export const productoSchema = z.object({
   piezas_por_bulto: z.number().positive().optional(),
   unidad_precio_base: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.enum(['pza', 'kg']).optional()),
   unidad_precio_mayoreo: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.enum(UNIDADES_VENTA).optional()),
+  unidad_inventario_principal: z.enum(UNIDADES_VENTA).default('pza'),
   requiere_caducidad: z.boolean().default(false),
   fecha_caducidad: z.string().optional(),
   codigo_barras: z.string().optional(),
@@ -72,21 +73,63 @@ export const clienteSchema = z.object({
   limite_credito: z.number().nonnegative().default(0),
 })
 
+export const DISCREPANCIA_TIPOS = ['faltante', 'sobrante', 'danado', 'devolucion'] as const
+export type DiscrepanciaTipo = typeof DISCREPANCIA_TIPOS[number]
+
+export const RECEPCION_ESTADOS = [
+  'borrador', 'recibida', 'con_discrepancias', 'cerrada', 'cancelada',
+] as const
+export type RecepcionEstado = typeof RECEPCION_ESTADOS[number]
+
 export const recepcionItemSchema = z.object({
   producto_id: z.string().uuid(),
   cantidad_esperada: z.number().positive().optional(),
-  cantidad_recibida: z.number().positive('La cantidad debe ser mayor a 0'),
+  cantidad_recibida: z.number().nonnegative('La cantidad no puede ser negativa'),
   fecha_caducidad: z.string().optional(),
+  discrepancia_tipo: z.preprocess(
+    (v) => (v == null || v === '' ? undefined : v),
+    z.enum(DISCREPANCIA_TIPOS).optional(),
+  ),
   discrepancia: z.string().max(500).optional(),
-  zona_id: z.string().uuid().optional(),
+  zona_id: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.string().uuid().optional()),
 })
 
 export const crearRecepcionSchema = z.object({
-  proveedor_id: z.string().uuid().optional(),
+  proveedor_id: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.string().uuid().optional()),
   almacen_id: z.string().uuid('Selecciona un almacén'),
+  despachador_responsable_id: z.preprocess((v) => (v == null || v === '' ? undefined : v), z.string().uuid().optional()),
   fecha: z.string().optional(),
+  fecha_factura: z.string().optional(),
+  folio_factura: z.string().max(50).optional(),
+  monto_factura: z.preprocess(
+    (v) => (v == null || v === '' ? undefined : Number(v)),
+    z.number().nonnegative().optional(),
+  ),
+  factura_url: z.string().optional(),
   notas: z.string().max(500).optional(),
   items: z.array(recepcionItemSchema).min(1, 'Agrega al menos un producto'),
+})
+
+export const actualizarRecepcionSchema = crearRecepcionSchema.partial().extend({
+  recepcion_id: z.string().uuid(),
+})
+
+export const marcarRecibidaSchema = z.object({
+  recepcion_id: z.string().uuid(),
+})
+
+export const cerrarRecepcionSchema = z.object({
+  recepcion_id: z.string().uuid(),
+  costos: z.array(z.object({
+    item_id: z.string().uuid(),
+    costo_unitario: z.number().nonnegative('El costo no puede ser negativo'),
+  })).min(1, 'Captura los costos de cada producto'),
+  actualizar_costo_producto: z.boolean().default(true),
+})
+
+export const cancelarRecepcionSchema = z.object({
+  recepcion_id: z.string().uuid(),
+  motivo: z.string().max(500).optional(),
 })
 
 export const ajusteInventarioSchema = z.object({
@@ -113,11 +156,42 @@ export const proveedorSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
 })
 
+export const preferenciasSurtidoSchema = z.object({
+  top_n: z.number().int().min(1).max(200).default(20),
+  incluir_bajo_minimo: z.boolean().default(true),
+  almacen_destino_default: z.string().uuid().optional(),
+  solo_controla_inventario: z.boolean().default(true),
+})
+
+export const generarBorradorSurtidoSchema = z.object({
+  almacen_destino_id: z.string().uuid('Selecciona el almacén destino'),
+  top_n: z.number().int().min(1).max(200).optional(),
+  incluir_bajo_minimo: z.boolean().optional(),
+  solo_controla_inventario: z.boolean().optional(),
+})
+
+export const crearListaSurtidoSchema = z.object({
+  almacen_destino_id: z.string().uuid(),
+  notas: z.string().max(500).optional(),
+  items: z.array(z.object({
+    producto_id: z.string().uuid(),
+    cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
+    almacen_origen_item_id: z.string().uuid().optional(),
+  })).min(1, 'Agrega al menos un producto'),
+})
+
+export type PreferenciasSurtidoInput = z.infer<typeof preferenciasSurtidoSchema>
+export type GenerarBorradorSurtidoInput = z.infer<typeof generarBorradorSurtidoSchema>
+export type CrearListaSurtidoInput = z.infer<typeof crearListaSurtidoSchema>
+
 export type CrearTicketInput = z.infer<typeof crearTicketSchema>
 export type ProductoInput = z.infer<typeof productoSchema>
 export type CategoriaProducto = typeof CATEGORIAS_PRODUCTO[number]
 export type ClienteInput = z.infer<typeof clienteSchema>
 export type CrearRecepcionInput = z.infer<typeof crearRecepcionSchema>
+export type ActualizarRecepcionInput = z.infer<typeof actualizarRecepcionSchema>
+export type CerrarRecepcionInput = z.infer<typeof cerrarRecepcionSchema>
+export type CancelarRecepcionInput = z.infer<typeof cancelarRecepcionSchema>
 export type AjusteInventarioInput = z.infer<typeof ajusteInventarioSchema>
 export type AlmacenInput = z.infer<typeof almacenSchema>
 export type ProveedorInput = z.infer<typeof proveedorSchema>

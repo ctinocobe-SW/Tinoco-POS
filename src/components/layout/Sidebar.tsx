@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Receipt, Package, Users, Warehouse,
-  Truck, BarChart3, CheckSquare, ShoppingCart, Settings, Menu, X, CreditCard,
+  Truck, BarChart3, CheckSquare, ShoppingCart, Settings, Menu, X, CreditCard, FileText,
 } from 'lucide-react'
 import type { UserRole } from '@/types/database.types'
 import { cn } from '@/lib/utils/cn'
@@ -27,6 +27,8 @@ const navByRole: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: 'Clientes',       href: '/admin/clientes',       icon: Users },
     { label: 'Créditos',       href: '/admin/creditos',       icon: CreditCard,   badgeKey: 'creditosVencidos' },
     { label: 'Inventario',     href: '/admin/inventario',     icon: Warehouse },
+    { label: 'Recepciones',    href: '/admin/recepciones',    icon: Package,      badgeKey: 'recepcionesPendientes' },
+    { label: 'Facturas',       href: '/admin/facturas',       icon: FileText },
     { label: 'Surtido',        href: '/admin/surtido',        icon: Truck },
     { label: 'Analítica',      href: '/admin/analitica',      icon: BarChart3 },
     { label: 'Configuración',  href: '/admin/configuracion',  icon: Settings },
@@ -35,11 +37,12 @@ const navByRole: Record<UserRole, { label: string; href: string; icon: React.Ele
     { label: 'Inicio',         href: '/despachador',                    icon: LayoutDashboard },
     { label: 'Mis Tickets',    href: '/despachador/tickets',            icon: Receipt },
     { label: 'Nuevo Ticket',   href: '/despachador/tickets/nuevo',      icon: ShoppingCart },
-    { label: 'Recepciones',    href: '/despachador/recepciones',        icon: Package },
+    { label: 'Mis Recepciones',href: '/despachador/recepciones',        icon: Package },
     { label: 'Surtido',        href: '/despachador/surtido',            icon: Truck },
   ],
   checador: [
     { label: 'Cola',           href: '/checador',             icon: CheckSquare },
+    { label: 'Recepciones',    href: '/checador/recepciones', icon: Package },
     { label: 'Surtido',        href: '/checador/surtido',     icon: Truck },
     { label: 'Historial',      href: '/checador/historial',   icon: Receipt },
   ],

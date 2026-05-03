@@ -373,10 +373,20 @@ export async function despacharTicket(ticketId: string) {
     return { error: updateError.message }
   }
 
+  // Descontar inventario en El Mercader (o el almacén del ticket)
+  const { error: invError } = await supabase.rpc('descontar_inventario_ticket', {
+    p_ticket_id: ticketId,
+  })
+  if (invError) {
+    // No revertimos el despacho, solo avisamos
+    console.error('Error al descontar inventario:', invError.message)
+  }
+
   revalidatePath('/despachador/surtido')
   revalidatePath('/admin/surtido')
   revalidatePath('/admin/tickets')
   revalidatePath('/despachador/tickets')
+  revalidatePath('/admin/inventario')
 
   return { data: { despachado: true } }
 }
@@ -505,8 +515,17 @@ export async function entregarTicket(
 
   if (error) return { error: error.message }
 
+  // Descontar inventario en El Mercader (o el almacén del ticket)
+  const { error: invError } = await supabase.rpc('descontar_inventario_ticket', {
+    p_ticket_id: ticketId,
+  })
+  if (invError) {
+    console.error('Error al descontar inventario:', invError.message)
+  }
+
   revalidatePath('/admin/tickets')
   revalidatePath('/admin')
+  revalidatePath('/admin/inventario')
   return { data: { ok: true } }
 }
 

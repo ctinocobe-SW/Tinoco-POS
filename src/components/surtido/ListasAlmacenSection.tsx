@@ -21,29 +21,18 @@ export function ListasAlmacenSection({ listas: initialListas, rol }: Props) {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <ClipboardList size={18} className="text-muted-foreground" />
-          <div>
-            <h1 className="text-2xl font-heading font-semibold">Surtido</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {borradores.length} en progreso · {finalizadas.length} finalizada{finalizadas.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-        {canCreate && (
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus size={15} className="mr-1.5" />
-            Nueva lista
+      {canCreate && (
+        <div className="flex justify-end mb-3">
+          <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}>
+            <Plus size={13} className="mr-1.5" />
+            Nueva checklist
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Listas en progreso */}
       {borradores.length > 0 && (
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
             En progreso
           </p>
           <div className="space-y-2">
@@ -54,10 +43,9 @@ export function ListasAlmacenSection({ listas: initialListas, rol }: Props) {
         </div>
       )}
 
-      {/* Listas finalizadas */}
       {finalizadas.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
             Finalizadas
           </p>
           <div className="space-y-2">
@@ -68,14 +56,10 @@ export function ListasAlmacenSection({ listas: initialListas, rol }: Props) {
         </div>
       )}
 
-      {/* Estado vacío */}
       {listas.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground border border-dashed border-border rounded-lg">
-          <ClipboardList size={32} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">No hay listas de almacén</p>
-          {canCreate && (
-            <p className="text-xs mt-1">Crea una para organizar el surtido de productos</p>
-          )}
+        <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+          <ClipboardList size={24} className="mx-auto mb-2 opacity-30" />
+          <p className="text-xs">Sin checklists manuales</p>
         </div>
       )}
 
