@@ -331,9 +331,9 @@ export async function cancelarRecepcion(input: CancelarRecepcionInput) {
 
   const { data: recepcion, error: fetchError } = await supabase
     .from('recepciones')
-    .select('id, estado, checador_id, notas')
+    .select('id, estado, checador_id, notas, factura_url')
     .eq('id', recepcion_id)
-    .single<{ id: string; estado: string; checador_id: string; notas: string | null }>()
+    .single<{ id: string; estado: string; checador_id: string; notas: string | null; factura_url: string | null }>()
 
   if (fetchError || !recepcion) return { error: 'Recepción no encontrada' }
 
@@ -354,10 +354,15 @@ export async function cancelarRecepcion(input: CancelarRecepcionInput) {
 
   const { error: upErr } = await supabase
     .from('recepciones')
-    .update({ estado: 'cancelada', notas: notasFinales })
+    .update({ estado: 'cancelada', notas: notasFinales, factura_url: null })
     .eq('id', recepcion_id)
 
   if (upErr) return { error: upErr.message }
+
+  // Limpiar archivo del bucket — best-effort (no falla la cancelación si Storage falla)
+  if (recepcion.factura_url) {
+    await supabase.storage.from(FACTURAS_BUCKET).remove([recepcion.factura_url])
+  }
 
   revalidatePath('/checador/recepciones')
   revalidatePath('/admin/recepciones')
