@@ -75,10 +75,7 @@ export async function crearRecepcion(input: CrearRecepcionInput) {
       factura_url: factura_url ?? null,
       notas: notas ?? null,
       estado: 'borrador',
-      // columnas legacy: las llenamos para compatibilidad con código antiguo
-      despachador_id: profile.id,
-      confirmado: false,
-    } as any)
+    })
 
   if (recepcionError) {
     return { error: recepcionError.message ?? 'Error al crear la recepción' }

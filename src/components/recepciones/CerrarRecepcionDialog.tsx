@@ -45,14 +45,18 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
     return initial
   })
 
-  const total = items.reduce((acc, it) => {
+  const itemsConCantidad = items.filter((it) => Number(it.cantidad_recibida) > 0)
+  const itemsSinCantidad = items.filter((it) => Number(it.cantidad_recibida) <= 0)
+
+  const total = itemsConCantidad.reduce((acc, it) => {
     const c = parseFloat(costos[it.id] ?? '0')
     if (Number.isNaN(c)) return acc
     return acc + c * Number(it.cantidad_recibida)
   }, 0)
 
   const handleCerrar = () => {
-    const costosArray = items.map((it) => {
+    // Solo enviar costos de items efectivamente recibidos
+    const costosArray = itemsConCantidad.map((it) => {
       const raw = costos[it.id]
       const parsed = parseFloat(raw)
       return {
@@ -61,7 +65,7 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
       }
     })
     if (costosArray.some((c) => !Number.isFinite(c.costo_unitario) || c.costo_unitario < 0)) {
-      toast.error('Captura un costo válido para todos los productos')
+      toast.error('Captura un costo válido para todos los productos recibidos')
       return
     }
 
@@ -114,7 +118,7 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
                 </tr>
               </thead>
               <tbody>
-                {items.map((it) => {
+                {itemsConCantidad.map((it) => {
                   const costo = parseFloat(costos[it.id] ?? '0')
                   const sub = Number.isFinite(costo) ? costo * Number(it.cantidad_recibida) : 0
                   return (
@@ -140,13 +144,25 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
                     </tr>
                   )
                 })}
+                {itemsSinCantidad.map((it) => (
+                  <tr key={it.id} className="border-b border-border last:border-0 opacity-40">
+                    <td className="px-3 py-2">
+                      <p className="font-medium">{it.producto_nombre}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{it.sku}</p>
+                    </td>
+                    <td className="px-3 py-2 text-center text-muted-foreground">0</td>
+                    <td className="px-3 py-2 text-center text-xs text-muted-foreground" colSpan={2}>
+                      No recibido — sin costo
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
           {/* MOBILE: cards */}
           <ul className="sm:hidden divide-y divide-border border border-border rounded-md">
-            {items.map((it) => {
+            {itemsConCantidad.map((it) => {
               const costo = parseFloat(costos[it.id] ?? '0')
               const sub = Number.isFinite(costo) ? costo * Number(it.cantidad_recibida) : 0
               return (
@@ -180,6 +196,15 @@ export function CerrarRecepcionDialog({ recepcionId, items, montoFactura }: Cerr
                 </li>
               )
             })}
+            {itemsSinCantidad.map((it) => (
+              <li key={it.id} className="px-3 py-3 opacity-40 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium leading-tight">{it.producto_nombre}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{it.sku}</p>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">No recibido</span>
+              </li>
+            ))}
           </ul>
 
           {/* Totales */}

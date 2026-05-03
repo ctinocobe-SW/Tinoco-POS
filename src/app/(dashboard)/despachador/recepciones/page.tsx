@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { Eye } from 'lucide-react'
 import { EstadoBadge } from '@/components/recepciones/EstadoBadge'
 import { formatDate } from '@/lib/utils/format'
 
@@ -51,12 +52,16 @@ export default async function DespachadorRecepcionesPage() {
               className="flex items-center justify-between border border-border rounded-lg px-4 py-3"
             >
               <div className="min-w-0">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-medium">{formatDate(r.fecha)}</p>
                   <EstadoBadge estado={r.estado} />
                   {r.folio_factura && (
                     <span className="text-xs font-mono text-muted-foreground">F: {r.folio_factura}</span>
                   )}
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-full px-2 py-0.5">
+                    <Eye size={10} />
+                    Solo consulta
+                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {r.proveedores?.nombre ?? 'Sin proveedor'}
