@@ -166,14 +166,18 @@ export async function marcarListaSurtidoEntregada(listaId: string) {
     return { error: 'No autorizado' }
   }
 
-  // Validar que todos los items tengan origen asignado (a nivel item o lista)
+  // Validar estado y que todos los items tengan origen asignado
   const { data: lista, error: listaErr } = await supabase
     .from('listas_surtido')
-    .select('almacen_origen_id, lista_surtido_items(id, almacen_origen_item_id)')
+    .select('estado, almacen_origen_id, lista_surtido_items(id, almacen_origen_item_id)')
     .eq('id', listaId)
     .single()
 
   if (listaErr || !lista) return { error: listaErr?.message ?? 'Lista no encontrada' }
+  if ((lista as any).estado === 'entregada') return { error: 'La lista ya fue entregada' }
+  if (!['confirmada', 'en_transito'].includes((lista as any).estado)) {
+    return { error: 'La lista debe estar confirmada o en tránsito' }
+  }
 
   const sinOrigen = ((lista as any).lista_surtido_items ?? []).filter(
     (i: any) => !i.almacen_origen_item_id && !(lista as any).almacen_origen_id
@@ -218,6 +222,17 @@ export async function confirmarRecepcionSurtidoChecador(listaId: string) {
   const { profile, supabase } = await getAuthenticatedProfile()
   if (!['admin', 'checador'].includes(profile.rol)) {
     return { error: 'Solo admin o checador pueden confirmar la recepción del surtido' }
+  }
+
+  // Guard: verificar estado actual de la lista antes de proceder
+  const { data: listaEstado } = await supabase
+    .from('listas_surtido')
+    .select('estado')
+    .eq('id', listaId)
+    .single()
+
+  if ((listaEstado as any)?.estado === 'entregada') {
+    return { error: 'La lista ya fue entregada' }
   }
 
   const { data: items, error: itemsErr } = await supabase
